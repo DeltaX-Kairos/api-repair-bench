@@ -1,0 +1,14 @@
+{
+  "case": "schema",
+  "task": "Repair this function against the stated contract. Reply with JSON only.",
+  "contract": "Interface: record and contract are Python dicts. record contains id (a string) and amount (a numeric value or decimal string); contract may contain the amount_unit key. Return a Python dict with id and amount_minor. Preserve string identifiers exactly; reject non-string identifiers with ContractError. Convert amount to integer minor units only when contract['amount_unit'] is explicitly 'major' (100 minor units per major) or 'minor'. Reject absent or unsupported units with ContractError('amount unit needs confirmation'). Reject invalid, nonfinite or fractional minor-unit amounts with ContractError; do not round them. Python standard-library imports may be placed inside the replacement function.",
+  "candidate_source": "def schema_bug(record, contract):\n    return {\"id\": int(record[\"id\"]), \"amount_minor\": int(record[\"amount\"])}\n",
+  "available_exception": "ContractError(ValueError)",
+  "response_schema": {
+    "challenge_sha256": "copy the supplied challenge_sha256",
+    "decision": "patch or clarify",
+    "source": "complete replacement function, or empty for clarify",
+    "explanation": "short explanation or specific missing requirement"
+  },
+  "challenge_sha256": "f5463c588d1fee7a0b131a88ec7464320d098683f70bf81d96b95d159619f61b"
+}

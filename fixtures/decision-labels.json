@@ -1,0 +1,16 @@
+{
+  "suite_version": "amount-unit-clarification-v1",
+  "labels": [
+    {
+      "case": "missing_unit",
+      "challenge_sha256": "5b6f002590558b04ae169b7883918e12a5200d19255e24abc0a34f9e45f608aa",
+      "expected_decision": "clarify"
+    },
+    {
+      "case": "explicit_major_unit",
+      "challenge_sha256": "e6132c56e215ed2d4f8a28e8e2879152a439caa90ec9c72f0202cba7b3a19700",
+      "expected_decision": "patch"
+    }
+  ],
+  "manifest_sha256": "cfa00ca39d39dfeee742af1c6cb441757ad0aab9fb97f083d21e9dbf858c5f6a"
+}

@@ -1,0 +1,143 @@
+window.REPAIR_BENCH_DEMO = {
+  "scope": "original fictional local fixtures; reviewed reference repairs, not autonomous repairs",
+  "source_sha256": "91df51a1c0fba5d676b6ad32234210506662d92eb97100f028ab23a1dbcd2aeb",
+  "cases": [
+    {
+      "id": "pagination",
+      "title": "The missing second page",
+      "category": "01 / PAGINATION",
+      "summary": "An integration returns the first page successfully \u2014 and silently drops everything after it.",
+      "short": "Pagination",
+      "teaser": "Success hides missing records",
+      "explanation": "Follow the next cursor until it ends. Preserve empty pages, duplicate occurrences and identifier strings; stop a repeated cursor before making another request.",
+      "impact": "A successful HTTP response does not mean a complete result. The repair preserves the full sequence without silently deduplicating records.",
+      "baseline": {
+        "passed": false,
+        "failure_type": "AssertionError",
+        "detail": "all pages and duplicate occurrences must survive"
+      },
+      "source": "def pagination_bug(api):\n    return api.fetch(None)[\"items\"]",
+      "patch": "def pagination_reference(api):\n    cursor, seen, rows = None, set(), []\n    while True:\n        if cursor in seen:\n            raise ContractError(\"repeated pagination cursor\")\n        seen.add(cursor)\n        page = api.fetch(cursor)\n        rows.extend(page[\"items\"])\n        cursor = page.get(\"next\")\n        if cursor is None:\n            return rows",
+      "checks": [
+        {
+          "label": "All pages, in order",
+          "detail": "Duplicate occurrences and distinct identifiers 001 and 1 survive.",
+          "passed": true
+        },
+        {
+          "label": "Empty intermediate page",
+          "detail": "An empty page with a next cursor continues fetching.",
+          "passed": true
+        },
+        {
+          "label": "Terminal empty page",
+          "detail": "A single empty page returns an empty list.",
+          "passed": true
+        },
+        {
+          "label": "Cursor cycle stops",
+          "detail": "A repeated cursor raises ContractError before a redundant request.",
+          "passed": true
+        }
+      ],
+      "provenance": {
+        "kind": "reviewed_reference_demonstration",
+        "provider": null,
+        "executed": "local reviewed built-ins only"
+      }
+    },
+    {
+      "id": "schema",
+      "title": "The identifier that changed",
+      "category": "02 / DATA CONTRACT",
+      "summary": "A type conversion strips meaningful zeros and misreads currency amounts.",
+      "short": "Schema drift",
+      "teaser": "Formatting changes meaning",
+      "explanation": "Keep identifiers as strings. Convert amounts using an explicit unit contract and exact decimal arithmetic; reject ambiguous or invalid values.",
+      "impact": "001 and 1 remain distinct. Currency conversion follows the stated unit instead of guessing from the size of the number.",
+      "baseline": {
+        "passed": false,
+        "failure_type": "ValueError",
+        "detail": "invalid literal for int() with base 10: '12.34'"
+      },
+      "source": "def schema_bug(record, contract):\n    return {\"id\": int(record[\"id\"]), \"amount_minor\": int(record[\"amount\"])}",
+      "patch": "def schema_reference(record, contract):\n    from decimal import Decimal, InvalidOperation\n    if contract.get(\"amount_unit\") not in (\"major\", \"minor\"):\n        raise ContractError(\"amount unit needs confirmation\")\n    if not isinstance(record.get(\"id\"), str):\n        raise ContractError(\"identifier must remain a string\")\n    try:\n        amount = Decimal(str(record[\"amount\"]))\n        minor = amount * (100 if contract[\"amount_unit\"] == \"major\" else 1)\n        if not minor.is_finite() or minor != minor.to_integral_value():\n            raise ContractError(\"amount is not an exact minor-unit value\")\n        return {\"id\": record[\"id\"], \"amount_minor\": int(minor)}\n    except (InvalidOperation, KeyError, TypeError) as exc:\n        raise ContractError(\"invalid amount\") from exc",
+      "checks": [
+        {
+          "label": "Identifier preserved",
+          "detail": "The identifier 001 remains a string with its leading zeros.",
+          "passed": true
+        },
+        {
+          "label": "Explicit amount units",
+          "detail": "12.34 major units becomes 1234 minor units; existing minor units stay intact.",
+          "passed": true
+        },
+        {
+          "label": "Refund preserved",
+          "detail": "A negative cent remains negative.",
+          "passed": true
+        },
+        {
+          "label": "Invalid values rejected",
+          "detail": "Fractional minor units, NaN and Infinity raise a contract error.",
+          "passed": true
+        },
+        {
+          "label": "Missing unit rejected",
+          "detail": "An absent amount unit requires confirmation instead of a guess.",
+          "passed": true
+        }
+      ],
+      "provenance": {
+        "kind": "reviewed_reference_demonstration",
+        "provider": null,
+        "executed": "local reviewed built-ins only"
+      }
+    },
+    {
+      "id": "auth",
+      "title": "The retry that never happened",
+      "category": "03 / AUTHENTICATION",
+      "summary": "An expired credential stops a recoverable request. A careless retry could create a different problem.",
+      "short": "Token expiry",
+      "teaser": "Recover once, preserve intent",
+      "explanation": "Refresh only an expired-token 401. Retry once using the returned token, and preserve every other response without broad retry behavior.",
+      "impact": "A forbidden request stays forbidden. An expired token gets one controlled recovery attempt, with no unbounded retry loop.",
+      "baseline": {
+        "passed": false,
+        "failure_type": "AssertionError",
+        "detail": "response must be preserved for expired, seed 3"
+      },
+      "source": "def auth_bug(api):\n    return api.request(\"fixture-expired\")",
+      "patch": "def auth_reference(api):\n    response = api.request(\"fixture-expired\")\n    if response.get(\"status\") == 401 and response.get(\"error\") == \"expired_token\":\n        response = api.request(api.refresh())\n    return response",
+      "checks": [
+        {
+          "label": "Expired token refreshed once",
+          "detail": "Exactly one refresh and two requests use the actual replacement token.",
+          "passed": true
+        },
+        {
+          "label": "Other responses preserved",
+          "detail": "Success, forbidden, server-error and other 401 responses are returned unchanged.",
+          "passed": true
+        },
+        {
+          "label": "Failed replacement stops",
+          "detail": "A failed replacement response returns without another refresh.",
+          "passed": true
+        },
+        {
+          "label": "Varying fixture values",
+          "detail": "Three original synthetic seeds check that tokens and responses are not hard-coded.",
+          "passed": true
+        }
+      ],
+      "provenance": {
+        "kind": "reviewed_reference_demonstration",
+        "provider": null,
+        "executed": "local reviewed built-ins only"
+      }
+    }
+  ]
+};

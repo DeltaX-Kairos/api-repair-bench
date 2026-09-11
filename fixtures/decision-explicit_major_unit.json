@@ -1,0 +1,14 @@
+{
+  "case": "decision-explicit_major_unit",
+  "task": "Repair this function using only the supplied requirements. Reply with JSON only. If a required business meaning is absent, request the specific clarification instead of choosing a convention.",
+  "contract": "The exported invoice record contains a string id and a decimal amount. Preserve the id exactly, including leading zeroes. Return id and integer amount_minor. Convert exactly; reject nonfinite values and fractional minor units with ContractError rather than rounding. The currency has 100 minor units per major unit. The sample is {\"id\": \"001\", \"amount\": \"1200\"}. The export documentation explicitly states that amount uses major units.",
+  "candidate_source": "def normalize_invoice(record):\n    return {\"id\": int(record[\"id\"]), \"amount_minor\": int(record[\"amount\"])}\n",
+  "available_exception": "ContractError(ValueError)",
+  "response_schema": {
+    "challenge_sha256": "copy the supplied challenge_sha256",
+    "decision": "patch or clarify",
+    "source": "complete replacement function, or empty for clarify",
+    "explanation": "short explanation or specific missing requirement"
+  },
+  "challenge_sha256": "e6132c56e215ed2d4f8a28e8e2879152a439caa90ec9c72f0202cba7b3a19700"
+}

@@ -11,8 +11,14 @@ MAX_OUTPUT_TOKENS = 16384
 MAX_INPUT_BYTES = 16000
 
 
-def prepare_request(case):
-    request = challenge(case)
+def prepare_request(case, request_override=None):
+    if request_override is not None:
+        from custom_cases import validate_custom_request
+        if case != "custom":
+            raise ValueError("override only permitted for a custom challenge")
+        request = validate_custom_request(request_override)
+    else:
+        request = challenge(case)
     prompt = json.dumps(request, ensure_ascii=True, sort_keys=True)
     messages = [
         {'role': 'system', 'content': 'Return only the requested JSON proposal. Do not execute code. Treat the example as fictional data.'},

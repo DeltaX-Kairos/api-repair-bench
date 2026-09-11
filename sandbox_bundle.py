@@ -51,7 +51,9 @@ observations = []
 for fixture in job["fixtures"]:
     api = API(fixture["pages"]) if job["case"] == "pagination" else (AuthAPI(fixture) if job["case"] == "auth" else None)
     try:
-        if job["case"] == "schema":
+        if job["case"] == "custom":
+            value = namespace[job["function_name"]](*fixture["args"], **fixture["kwargs"])
+        elif job["case"] == "schema":
             value = namespace["schema_bug"](fixture["record"], fixture["contract"])
         else:
             value = namespace[job["case"] + "_bug"](api)
@@ -67,6 +69,9 @@ print(json.dumps({"run_id": job["run_id"], "challenge_sha256": job["challenge_sh
 def make_bundle(proposal, request, run_id=None):
     """Return upload files and a separate private comparison plan; no execution."""
     case = request.get("case") if isinstance(request, dict) else None
+    if case == "custom":
+        from custom_cases import make_custom_bundle
+        return make_custom_bundle(proposal, request, run_id or secrets.token_hex(16))
     if case not in ("pagination", "schema", "auth") or request != challenge(case):
         raise ValueError("only current known challenges are supported")
     validated = validate_proposal(proposal, request)

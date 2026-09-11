@@ -16,11 +16,34 @@ Open http://127.0.0.1:18767. This is a **recorded evidence replay**, not a fresh
 
 Choose an integration, compare the source and reference repair, inspect the checks and recorded AI attempts, and export a reviewed reference example. Model proposals remain inert text in the browser. Keyboard controls and responsive layouts are included.
 
+## Live workspace — public verification complete
+
+The default public page remains the recorded review. The new `/live` workspace adds an explicit run button, progress trace, generated source, check outcomes and downloadable evidence. A visitor can select the fictional data-conversion example or supply one Python function with one to eight JSON checks. Jobs have a bounded proposal → Sandbox test → optional single correction → final result workflow. A missing or uncertain provider response is retained as unresolved, not automatically retried.
+
+The public route has now completed a real browser-triggered run: the initial Invoice repair proposal passed 4/9 checks, the bounded correction passed 9/9, and the workflow stopped without deployment. That result is one observed run, not a reliability guarantee; historical recorded outcomes below remain separate.
+
+There are two adapters for the same product workflow:
+
+- `live_service.py` and `custom_cases.py` provide the local Python implementation, durable SQLite jobs, visitor isolation and bounded worker execution.
+- `portable-live/` provides a JavaScript core and the exact Nebius REST transport for an existing Sites Cloudflare Worker. Sites supplies the thin web/API layer; NVIDIA Nemotron inference and Python candidate execution remain on Nebius Token Factory and Nebius Sandbox. No GPU or additional application server is rented by this design.
+
+The hosted Worker entrypoint and durable storage schema are included in deployment/. The portable-live modules remain the portable core and REST transport, so the candidate function still runs remotely in Nebius Sandbox rather than inside the website Worker. The deployment template takes NEBIUS_API_KEY and NEBIUS_PROJECT_ID from the host environment; no account-specific values are committed.
+
+To inspect the local live UI with execution disabled:
+
+```sh
+python3 live_service.py --origin http://127.0.0.1:18768
+```
+
+Open http://127.0.0.1:18768/live. To enable your own provider-backed development run, configure `NEBIUS_API_KEY` privately and `REPAIR_BENCH_PROJECT_ID`, use the installed Sandbox dependencies, and explicitly add `--enabled`. Never put a key in source or browser code. The default limits allow three total jobs and two per visitor; the existing durable model-attempt allowance still applies. Read-only inspection must not reset job state, consumed budget or uncertain dispatches.
+
 ## Reproduce the offline checks
 
 ```sh
 python3 -m unittest discover -v
 node ui/test-ui.cjs
+node live-ui/test-live.cjs
+node --test portable-live/test-repair-core.mjs portable-live/sandbox-rest.test.mjs
 python3 cli.py results
 python3 cli.py challenge auth
 ```
@@ -73,10 +96,11 @@ That command only requests the correction; verification is a separate explicit c
 - `challenges.py` supplies broken functions and complete public interfaces without reference answers. `inference_request.py` prepares the NVIDIA `nvidia/Nemotron-3_5-Lightning` request to Nebius Token Factory.
 - `provider_client.py` verifies model availability, reserves before a single send, accepts only complete structurally valid proposals, and saves outcomes. `budget_guard.py` prevents duplicate reservations.
 - `sandbox_bundle.py` packages only synthetic candidate, runner and job input. `sandbox_client.py` runs them remotely in Nebius Sandbox with bounded requested runtime/output. Expected results remain outside the candidate runtime.
+- `custom_cases.py` validates a single function and user-supplied JSON checks without executing the source. `live_service.py` exposes the bounded visitor/job API.
 - `pipeline.py` connects saved proposals, remote comparison and one feedback correction. `evaluation.py` separates paired corrections, changed contracts, rejections and uncertain outcomes.
 - `serve.py` is the developer review desk for locally generated receipts; `cli.py demo` serves the bundled recorded judging replay.
 
-Matching remote observations **does not prove trusted execution**: candidate code shares a process with the observation runner and can spoof output. Receipts retain `trusted_execution_proven: false`. Neither this synthetic suite nor the SDK settings establish production isolation, egress control, deletion, broad repair reliability or suitability for customer code. The current system uses only original fictional data and never deploys generated changes automatically.
+Matching remote observations **does not prove trusted execution**: candidate code shares a process with the observation runner and can spoof output. Receipts retain `trusted_execution_proven: false`. Neither this synthetic suite nor the SDK settings establish production isolation, egress control, deletion, broad repair reliability or suitability for customer code. The recorded evaluation uses original fictional data. The live custom-function path accepts user-supplied code and checks; those examples do not prove general correctness. Generated changes are never deployed automatically.
 
 ## Recorded outcomes
 

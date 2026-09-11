@@ -41,7 +41,7 @@ def verify_saved(run_id, api_key, executor=execute_bundle):
     if receipt.get('sandbox_dispatch_reserved'):
         raise ValueError('sandbox attempt already reserved; reconcile before retry')
     proposal = {k: receipt['proposal'][k] for k in ('challenge_sha256', 'decision', 'source', 'explanation')}
-    bundle = make_bundle(proposal, challenge(receipt['case']), run_id=run_id)
+    bundle = make_bundle(proposal, receipt['challenge_snapshot'] if receipt['case'] == 'custom' else challenge(receipt['case']), run_id=run_id)
     # Exclusive marker survives crashes and prevents duplicate remote dispatch.
     marker = path.with_suffix('.sandbox-reserved')
     with marker.open('x') as f:
@@ -90,7 +90,7 @@ def reverify_saved(run_id, api_key, executor=execute_bundle):
     if not path.with_suffix('.sandbox-reserved').is_file():
         raise ValueError('original sandbox reservation missing')
     proposal = {k: receipt['proposal'][k] for k in ('challenge_sha256', 'decision', 'source', 'explanation')}
-    bundle = make_bundle(proposal, challenge(receipt['case']), run_id=run_id)
+    bundle = make_bundle(proposal, receipt['challenge_snapshot'] if receipt['case'] == 'custom' else challenge(receipt['case']), run_id=run_id)
     marker = path.with_suffix('.sandbox-reverification-reserved')
     with marker.open('x') as f:
         f.write('Single explicit fresh sandbox verification reserved. Never remove automatically.\n')
@@ -149,4 +149,4 @@ def propose_correction(run_id, api_key):
     # Send only bounded mismatch description, never private oracle or reference code.
     result = parent.get('sandbox_result', {})
     feedback = correction_feedback(result)
-    return run_case(parent['case'], api_key, correction={'parent_receipt': parent, 'feedback': feedback or 'External observations did not match the stated contract.'})
+    return run_case(parent['case'], api_key, request_override=parent.get('challenge_snapshot') if parent['case'] == 'custom' else None, correction={'parent_receipt': parent, 'feedback': feedback or 'External observations did not match the stated contract.'})

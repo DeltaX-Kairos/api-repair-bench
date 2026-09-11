@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Run a repair · API Repair Bench</title><link rel="stylesheet" href="styles.css"></head>
+<body>
+<a class="skip" href="#workspace">Skip to workspace</a>
+<header><a class="brand" href="https://repairbench.deltaxevaluate.com">⌁ <span>REPAIR<span class="light">BENCH</span></span></a><nav aria-label="Modes"><a href="https://repairbench.deltaxevaluate.com">Saved replay</a><a aria-current="page" href="./">Run a repair</a></nav></header>
+<main>
+<section class="intro"><div class="intro-copy"><p class="eyebrow">NEBIUS SANDBOX × NVIDIA NEMOTRON</p><h1>Watch Nemotron<br><em>repair your function.</em></h1><p>Turn a broken integration into a reviewable change. Nemotron proposes the patch, Nebius tests it, and the trace makes the stopping point clear.</p><div class="intro-actions"><a class="intro-cta" href="#workspace">Start with the invoice case <span aria-hidden="true">↘</span></a><a class="replay" href="https://repairbench.deltaxevaluate.com">Explore the saved results first ↗</a></div></div><aside class="proof-card" aria-label="Latest verified live run"><span class="proof-label">LATEST VERIFIED RUN</span><strong>4/9 <span>→</span> 9/9</strong><p>One bounded correction<br>All nine contract checks passed</p><small>Real Token Factory + Sandbox path</small></aside></section>
+<section class="workspace" id="workspace" aria-label="Live repair workspace">
+<div class="setup">
+<div class="section-heading"><p class="eyebrow">01 / SET THE TASK</p><span class="pill" id="availability">Checking availability</span></div>
+<h2>Choose code and checks.</h2>
+<p class="subtle" id="availability-detail" role="status">Checking whether new runs are available. Saved results are always a separate view.</p>
+<form id="repair-form">
+<fieldset class="choices"><legend>Choose input</legend><label><input name="mode" type="radio" value="case" checked><span><strong>Invoice repair</strong><small>A ready-to-run case with nine checks</small></span></label><label><input name="mode" type="radio" value="custom"><span><strong>Your function</strong><small>Python source + JSON checks</small></span></label></fieldset>
+<div id="case-panel"><div class="case-card"><span class="case-icon" aria-hidden="true">{ }</span><h3>Preserve identifiers. Convert amounts exactly.</h3><p>Repair invoice normalization without losing leading zeroes, guessing units, or rounding invalid precision.</p><ul><li>Explicit major and minor currency units</li><li>Negative amounts and invalid values</li><li>Missing units must be rejected</li></ul></div></div>
+<div id="custom-panel" hidden><div class="custom-intro"><strong>Bring one small function.</strong><span>Start with the example, then change the contract.</span></div><label class="field-label" for="source">Python function <span>8 KB maximum</span></label><textarea id="source" spellcheck="false" rows="6" aria-describedby="source-help">def normalize_id(value):
+    return int(value)
+</textarea><p class="hint" id="source-help">One synchronous function. Standard-library imports belong inside it. Use a small, self-contained example without credentials or customer data.</p><label class="field-label" for="checks">Contract and checks <span>Up to 8 checks</span></label><textarea id="checks" spellcheck="false" rows="14" aria-describedby="checks-help">{
+  "description": "Accept string identifiers, preserve every character including leading zeroes, and reject non-string inputs with ValueError.",
+  "checks": [
+    {"id": "leading-zeroes", "args": ["001"], "expected": "001"},
+    {"id": "plain-id", "args": ["27"], "expected": "27"},
+    {"id": "reject-number", "args": [27], "error": "ValueError"}
+  ]
+}</textarea><p class="hint" id="checks-help">Each check supplies an id, JSON arguments, and either an expected value or an exception name. Optional kwargs pass named arguments.</p><details class="contract-help"><summary>What the checks look like</summary><p>Describe the behavior in plain language, then give one or more concrete inputs. The system treats these as a bounded review contract.</p></details></div>
+<div class="run-boundary"><strong>One bounded attempt</strong><p>Up to two model calls: one proposal and, if its tests fail, one correction. Code runs in the remote sandbox. Nothing is deployed.</p></div>
+<p id="form-error" class="error" role="alert" hidden></p><button class="primary" id="start" type="submit" disabled>Run live repair (uses credits) <span aria-hidden="true">↗</span></button><p class="hint">Starting sends your function and checks to the configured provider. The server enforces access and run limits.</p>
+</form></div>
+<div class="results"><div class="section-heading"><p class="eyebrow">02 / FOLLOW THE EVIDENCE</p><span class="pill" id="run-state">Ready when you are</span></div><h2 id="result-title">From proposal to a stopping point.</h2><p id="run-summary" class="subtle" role="status" aria-live="polite">No live run has started. Choose an input to begin.</p>
+<ol class="progress" aria-label="Execution stages"><li id="step-propose">Propose</li><li id="step-test">Sandbox test</li><li id="step-correct">Correct once</li><li id="step-stop">Stop</li></ol>
+<div id="empty-state" class="empty"><span aria-hidden="true">⌁</span><h3>The trace will appear here.</h3><p>Each stage will show what ran, what changed, and what the checks observed.</p></div>
+<ol id="trace" class="trace" aria-label="Live execution trace"></ol>
+<div id="connection" class="error" role="alert" hidden></div><button id="resume" class="secondary" type="button" hidden>Check this run again</button>
+<section id="attempts" aria-label="Proposals and test results"></section>
+<button id="new-run" class="secondary" type="button" hidden>Start another repair</button>
+<button id="download" class="secondary" type="button" hidden>Download evidence ↓</button>
+<p class="limit">Checks are evidence for this contract, not production approval. Sandbox observations are not tamper-proof attestation.</p>
+</div></section>
+</main><footer><span>API Repair Bench / DeltaX Evaluate</span><a href="https://repairbench.deltaxevaluate.com">Return to saved replay ↗</a></footer>
+<script src="app.js"></script>
+</body></html>

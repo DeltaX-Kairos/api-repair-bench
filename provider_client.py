@@ -12,8 +12,9 @@ from challenges import validate_proposal, digest
 from inference_request import prepare_request, MODEL
 
 ROOT = Path(__file__).resolve().parent
-LEDGER = ROOT / 'output' / 'live-budget.sqlite3'
-RECEIPTS = ROOT / 'output' / 'live'
+DATA_ROOT = Path(os.environ.get('REPAIR_BENCH_DATA_DIR', str(ROOT / 'output')))
+LEDGER = DATA_ROOT / 'live-budget.sqlite3'
+RECEIPTS = DATA_ROOT / 'live'
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -34,10 +35,10 @@ def request_json(url, key, payload=None):
         return json.loads(body)
 
 
-def run_case(case, key, transport=request_json, correction=None):
+def run_case(case, key, transport=request_json, correction=None, request_override=None):
     if not isinstance(key, str) or len(key) < 30 or any(c.isspace() for c in key):
         raise ValueError('credential unavailable')
-    prepared = prepare_request(case)
+    prepared = prepare_request(case, request_override=request_override)
     if correction is not None:
         parent = correction.get('parent_receipt', {})
         feedback = correction.get('feedback')

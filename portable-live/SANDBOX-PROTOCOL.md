@@ -29,7 +29,7 @@ The transport uses only fetch, Web Crypto, TextEncoder/TextDecoder, AbortControl
 
 Durable job ownership, budget reservations, polling phases, provider secrets and model-request lifecycle belong to the outer Worker. This transport does not supply them or establish that the current hosting account enables the required bindings. No long model invocation should depend on a background task surviving after its request closes.
 
-Eighteen offline tests pass, including exact wire shapes, hashing/tamper checks, no POST retries, bounded output, sanitized failures and integration with the actual portable core bundle. No provider request or deployment was made for these tests. A bounded live verification of these exact REST calls remains necessary before claiming the Worker path works publicly.
+Twenty-eight offline core and REST tests pass, including exact wire shapes, hashing/tamper checks, no POST retries, bounded output, sanitized failures, pagination fixtures and integration with the actual portable core bundle. No provider request or deployment was made for these tests. A bounded live verification of these exact REST calls is recorded in `VALIDATION.md`.
 
 Safe diagnostics include only fixed `failure_stage`, static `error_code`, and optional numeric `http_status`; raw provider bodies, headers and exception messages are never returned. The Python SDK also uses an optional GET-by-hash deduplication before upload; direct raw-byte POST remains its supported upload operation. Its OCI normalizer resolves the image used here to exactly `python:3.12-slim`.
 

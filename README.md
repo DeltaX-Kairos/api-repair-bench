@@ -8,6 +8,8 @@
 
 ![Captured 4/9 to 9/9 invoice repair](docs/judges/invoice-repair-4-to-9.png)
 
+**90-second judging cut:** [watch the live repair walkthrough](https://youtu.be/MYQMYI5FR2I)
+
 Click **Run a repair → Invoice repair → Run live repair**. Watch the trace move through NVIDIA Nemotron, Nebius Token Factory and Nebius Sandbox; then inspect the failed check, the one correction and the downloadable evidence. The exact click path is also in [JUDGES.md](JUDGES.md).
 
 ## What this is

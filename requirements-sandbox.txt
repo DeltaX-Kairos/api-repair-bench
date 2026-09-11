@@ -1,0 +1,2 @@
+contree-sdk[httpx] @ git+https://github.com/nebius/contree-sdk.git@38d973120ecdb8e459ab7ee375704c7aef54d035
+contree-client[httpx]==0.2.2

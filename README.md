@@ -1,10 +1,22 @@
 # API Repair Bench
 
-Turn an API bug into a reviewable repair: NVIDIA Nemotron proposes the change, Nebius runs the checks, and developers inspect what passed, what failed, and what still needs a decision.
+## Judges — start here
+
+- **Live:** [repairbench.deltaxevaluate.com/live](https://repairbench.deltaxevaluate.com/live/)
+- **Replay if live allowance is used:** [saved review](https://repairbench.deltaxevaluate.com/)
+- **One sentence:** Nemotron proposes a patch, Nebius Sandbox runs your checks, one correction max, then it stops.
+
+![Captured 4/9 to 9/9 invoice repair](docs/judges/invoice-repair-4-to-9.png)
+
+Click **Run a repair → Invoice repair → Run live repair**. Watch the trace move through NVIDIA Nemotron, Nebius Token Factory and Nebius Sandbox; then inspect the failed check, the one correction and the downloadable evidence. The exact click path is also in [JUDGES.md](JUDGES.md).
+
+## What this is
+
+API Repair Bench is a review desk for a broken API client function when HTTP succeeded and the contract didn’t. It turns a proposed code change into bounded, inspectable evidence instead of silently deploying a guess.
 
 Built for the Nebius × NVIDIA Global AI Hackathon, Coding and Agentic Engineering track. Original synthetic application and fixtures, developed with AI assistance under founder review. This repository does not include the private DeltaX engine.
 
-## Try the recorded review — no account or key required
+## Reproduce locally — no account or key required
 
 Python 3.12 is recommended. From this directory:
 
@@ -21,6 +33,8 @@ Choose an integration, compare the source and reference repair, inspect the chec
 The default public page remains the recorded review. The new `/live` workspace adds an explicit run button, progress trace, generated source, check outcomes and downloadable evidence. A visitor can select the fictional data-conversion example or supply one Python function with one to eight JSON checks. Jobs have a bounded proposal → Sandbox test → optional single correction → final result workflow. A missing or uncertain provider response is retained as unresolved, not automatically retried.
 
 The public route has now completed a real browser-triggered run: the initial Invoice repair proposal passed 4/9 checks, the bounded correction passed 9/9, and the workflow stopped without deployment. That result is one observed run, not a reliability guarantee; historical recorded outcomes below remain separate.
+
+The live workspace also includes a pagination case built around a real incident pattern: an HTTP 200 response dropped page 2. It checks empty pages, duplicate occurrences, repeated cursors and the request budget. See the concrete [incident card](docs/incident.md).
 
 There are two adapters for the same product workflow:
 

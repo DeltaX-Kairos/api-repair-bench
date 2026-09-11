@@ -1,6 +1,8 @@
 /* Pure portable repair logic. No network calls or local candidate execution. */
 const SCHEMA_CONTRACT = "Interface: record and contract are Python dicts. record contains id (a string) and amount (a numeric value or decimal string); contract may contain the amount_unit key. Return a Python dict with id and amount_minor. Preserve string identifiers exactly; reject non-string identifiers with ContractError. Convert amount to integer minor units only when contract['amount_unit'] is explicitly 'major' (100 minor units per major) or 'minor'. Reject absent or unsupported units with ContractError('amount unit needs confirmation'). Reject invalid, nonfinite or fractional minor-unit amounts with ContractError; do not round them. Python standard-library imports may be placed inside the replacement function.";
 const SCHEMA_SOURCE = "def schema_bug(record, contract):\n    return {\"id\": int(record[\"id\"]), \"amount_minor\": int(record[\"amount\"])}\n";
+const PAGINATION_CONTRACT = "Interface: api.fetch(cursor) returns a Python dict with items (a list) and next (a string cursor or None). Initial cursor is None. Return all items in order, preserving duplicate occurrences. Follow the next field until None, including after empty pages. Stop with ContractError('repeated pagination cursor') before fetching a cursor twice. Make at most ten fetch requests; if more would be required, raise ContractError('request budget exhausted') instead of issuing an eleventh request.";
+const PAGINATION_SOURCE = "def pagination_bug(api):\n    return api.fetch(None)[\"items\"]\n";
 export const MODEL = 'nvidia/Nemotron-3_5-Lightning';
 export const ENDPOINT = 'https://api.tokenfactory.nebius.com/v1/chat/completions';
 export const MAX_OUTPUT_TOKENS = 16384;
@@ -74,7 +76,9 @@ export async function buildChallenge(payload){
     contract:SCHEMA_CONTRACT,candidate_source:SCHEMA_SOURCE,function_name:'schema_bug',
     available_exception:'ContractError(ValueError)',core_version:'portable-live-v1',
     response_schema:{challenge_sha256:'copy the supplied challenge_sha256',decision:'patch or clarify',source:'complete replacement function, or empty for clarify',explanation:'short explanation or specific missing requirement'}};
-  if(exact(payload,['case'])&&payload.case==='schema'){}
+  if(exact(payload,['case'])&&(payload.case==='schema'||payload.case==='pagination')){
+    if(payload.case==='pagination') request={...request,case:'pagination',contract:PAGINATION_CONTRACT,candidate_source:PAGINATION_SOURCE,function_name:'pagination_bug'};
+  }
   else if(exact(payload,['source','checks'])){
     const fn=sourceName(payload.source), c=payload.checks;
     if(!exact(c,['description','checks'])||typeof c.description!=='string'||c.description.trim().length<1||c.description.length>2000||!Array.isArray(c.checks)||c.checks.length<1||c.checks.length>8)fail('Provide a description and 1–8 checks');
@@ -90,16 +94,17 @@ export async function buildChallenge(payload){
     }
     request={...request,case:'custom',candidate_source:payload.source,function_name:fn,user_description:c.description,user_checks:structuredClone(c.checks),
       contract:c.description+'\nInterface: JSON arguments and JSON-serializable result. Python standard-library imports inside the function are permitted. Preserve the exact function name and signature. Use one plain function without decorators, annotations, defaults, or variadic arguments. These checks are user-supplied examples, not a complete correctness proof.'};
-  } else fail('Choose schema or provide source and checks');
+  } else fail('Choose invoice, pagination, or provide source and checks');
   return {...request,challenge_sha256:await digest(request)};
 }
 
 async function validateChallenge(request){
   if(!object(request))fail('Invalid challenge');
   const {challenge_sha256,...body}=request;
-  if(!['schema','custom'].includes(request.case)||await digest(body)!==challenge_sha256)fail('Challenge binding mismatch');
+  if(!['schema','pagination','custom'].includes(request.case)||await digest(body)!==challenge_sha256)fail('Challenge binding mismatch');
   if(request.case==='custom'&&canonical(await buildChallenge({source:request.candidate_source,checks:{description:request.user_description,checks:request.user_checks}}))!==canonical(request))fail('Unknown custom challenge');
   if(request.case==='schema'&&canonical(await buildChallenge({case:'schema'}))!==canonical(request))fail('Unknown schema challenge');
+  if(request.case==='pagination'&&canonical(await buildChallenge({case:'pagination'}))!==canonical(request))fail('Unknown pagination challenge');
 }
 
 export async function prepareRequest(request,parentReceipt=null){
@@ -164,15 +169,29 @@ namespace = {"ContractError": ContractError}
 exec(compile(candidate_tree, "candidate.py", "exec"), namespace)
 observations = []
 for fixture in job["fixtures"]:
+    calls = []
     try:
         if job["case"] == "custom":
             result = namespace[job["function_name"]](*fixture["args"], **fixture["kwargs"])
+        elif job["case"] == "pagination":
+            class FixtureAPI:
+                def __init__(self, pages):
+                    self.pages = {json.dumps(row["cursor"], sort_keys=True): row["page"] for row in pages}
+                    self.calls = []
+                def fetch(self, cursor):
+                    self.calls.append(cursor)
+                    if len(self.calls) > 10:
+                        raise ContractError("request budget exhausted")
+                    return self.pages[json.dumps(cursor, sort_keys=True)]
+            api = FixtureAPI(fixture["pages"])
+            result = namespace[job["function_name"]](api)
+            calls = api.calls
         else:
             result = namespace["schema_bug"](fixture["record"], fixture["contract"])
-        outcome = {"kind": "return", "value": result}
+    outcome = {"kind": "return", "value": result}
     except Exception as exc:
         outcome = {"kind": "error", "type": type(exc).__name__, "message": str(exc)}
-    observations.append({"id": fixture["id"], "outcome": outcome, "calls": []})
+    observations.append({"id": fixture["id"], "outcome": outcome, "calls": calls})
 print(json.dumps({"run_id": job["run_id"], "challenge_sha256": job["challenge_sha256"],
     "proposal_sha256": job["proposal_sha256"], "observations": observations}, allow_nan=False))
 `;
@@ -190,6 +209,27 @@ function schemaFixtures(tag){
   return {fixtures:rows.map(([id,record,contract])=>({id,record,contract})),expected:rows.map(([id,r,c,outcome])=>({id,outcome,calls:[]}))};
 }
 
+function paginationFixtures(){
+  const cases=[];
+  cases.push({fixture:{id:'all-pages',pages:[
+    {cursor:null,page:{items:['page-1'],next:'p2'}},
+    {cursor:'p2',page:{items:[],next:'p3'}},
+    {cursor:'p3',page:{items:['page-1','page-2'],next:null}}
+  ]},expected:{kind:'return',value:['page-1','page-1','page-2']},calls:[null,'p2','p3']});
+  cases.push({fixture:{id:'empty-page',pages:[
+    {cursor:null,page:{items:[],next:'tail'}},
+    {cursor:'tail',page:{items:['tail-item'],next:null}}
+  ]},expected:{kind:'return',value:['tail-item']},calls:[null,'tail']});
+  cases.push({fixture:{id:'repeated-cursor',pages:[
+    {cursor:null,page:{items:[],next:'loop'}},
+    {cursor:'loop',page:{items:[],next:'loop'}}
+  ]},expected:{kind:'error',type:'ContractError'},calls:[null,'loop']});
+  const pages=[{cursor:null,page:{items:['first'],next:'p1'}}];
+  for(let i=1;i<=10;i++) pages.push({cursor:'p'+i,page:{items:['item-'+i],next:i<10?'p'+(i+1):null}});
+  cases.push({fixture:{id:'request-budget',pages},expected:{kind:'error',type:'ContractError'},calls:[null,...Array.from({length:10},(_,i)=>'p'+(i+1))]});
+  return {fixtures:cases.map(row=>row.fixture),expected:cases.map(row=>({id:row.fixture.id,outcome:row.expected,calls:row.calls}))};
+}
+
 export async function makeBundle(proposal,request,runId){
   const validation=await validateProposal(proposal,request);
   if(validation.status!=='awaiting_remote_sandbox')fail('Patch required for execution');
@@ -197,6 +237,7 @@ export async function makeBundle(proposal,request,runId){
   const binding={run_id:runId,challenge_sha256:request.challenge_sha256,proposal_sha256:validation.proposal_sha256};
   let fixtures,expected;
   if(request.case==='schema')({fixtures,expected}=schemaFixtures((await textDigest(runId)).slice(0,12)));
+  else if(request.case==='pagination')({fixtures,expected}=paginationFixtures());
   else {
     fixtures=request.user_checks.map(c=>({id:c.id,args:c.args,kwargs:c.kwargs??{}}));
     expected=request.user_checks.map(c=>({id:c.id,outcome:Object.hasOwn(c,'error')?{kind:'error',type:c.error}:{kind:'return',value:c.expected},calls:[]}));

@@ -20,6 +20,18 @@ test('schema prompt binds a versioned complete contract and estimates no billed 
   await assert.rejects(()=>prepareRequest({...req,contract:'altered'}));
 });
 
+test('pagination challenge binds empty pages, duplicate items and cursor safety',async()=>{
+  const req=await buildChallenge({case:'pagination'}), prepared=await prepareRequest(req);
+  assert.equal(req.case,'pagination');
+  assert.equal(req.function_name,'pagination_bug');
+  assert.match(req.contract,/empty pages/);
+  assert.equal(prepared.payload.model,'nvidia/Nemotron-3_5-Lightning');
+  const bundle=await makeBundle({challenge_sha256:req.challenge_sha256,decision:'patch',source:req.candidate_source,explanation:'Synthetic pagination baseline.'},req,'pagination-run');
+  assert.equal(bundle.private_comparison_plan.expected_observations.length,4);
+  assert.deepEqual(bundle.private_comparison_plan.expected_observations.map(row=>row.id),['all-pages','empty-page','repeated-cursor','request-budget']);
+  assert.match(bundle.upload_files['runner.py'],/FixtureAPI/);
+});
+
 test('custom checks reject ambiguous fields and bind immutable examples',async()=>{
   const input=custom(),req=await buildChallenge(input);
   assert.equal(req.function_name,'total');

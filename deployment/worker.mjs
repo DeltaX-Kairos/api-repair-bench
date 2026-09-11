@@ -25,7 +25,7 @@ async function stopStale(db){
 async function info(db,owner,env){
  const stats=await db.prepare('SELECT COALESCE(SUM(reserved),0) AS reserved,COUNT(*) AS jobs,COALESCE(SUM(CASE WHEN owner=? THEN 1 ELSE 0 END),0) AS visitor,COALESCE(MAX(active),0) AS active FROM repair_jobs').bind(owner).first();
  const reason=!enabled(env)?'operator_disabled':stats.active?'busy':stats.visitor>=2?'session_limit':stats.reserved+HISTORICAL_RESERVED+JOB_RESERVATION>TOTAL_LIMIT?'allowance_exhausted':null;
- return {enabled:!reason,replay_only:!!reason,reason,jobs_per_visitor:2,execution_provider:'Nebius Sandbox',model_provider:'Nebius Token Factory',model:'NVIDIA Nemotron',credit_budget_usd:2};
+ return {enabled:!reason,replay_only:!!reason,reason,jobs_per_visitor:2,cases:['schema','pagination','custom'],execution_provider:'Nebius Sandbox',model_provider:'Nebius Token Factory',model:'NVIDIA Nemotron',credit_budget_usd:2};
 }
 async function readJson(request){
  if(!/^application\/json(?:;|$)/i.test(request.headers.get('content-type')||''))throw new Error('invalid_input');
@@ -43,7 +43,8 @@ async function advance(row,env){
  try{
   if(row.phase==='propose'||row.phase==='correct'){
    const correcting=row.phase==='correct';
-   trace(d,correcting?'correct':'propose',correcting?'Nemotron is preparing one correction from the failed checks.':'Nemotron is writing a proposed repair.');
+   const failedBaseline=correcting?d.receipts.at(-1)?.checks?.find(x=>x.passed!==true)?.id:null;
+   trace(d,correcting?'correct':'propose',correcting?`NVIDIA Nemotron is preparing one correction from the failed check${failedBaseline?` ${failedBaseline}`:''}.`:'NVIDIA Nemotron is writing a proposed repair through Nebius Token Factory.');
    await db.prepare('UPDATE repair_jobs SET data=? WHERE id=? AND token=?').bind(JSON.stringify(d),row.id,row.token).run();
    const parent=correcting?d.receipts.at(-1):undefined;
    const prepared=await prepareRequest(d.challenge,parent);
@@ -53,14 +54,14 @@ async function advance(row,env){
    const receipt={...parsed,run_id:uuid(),case:d.challenge.case,challenge_sha256:d.challenge.challenge_sha256,stage:correcting?'correction':'baseline',model:{provider:'Nebius',model:'nvidia/Nemotron-3_5-Lightning',completed:true},sandbox:{completed:false,observations_match:null},checks:[]};
    d.receipts.push(receipt);
    if(parsed.status!=='awaiting_remote_sandbox'){trace(d,'stop','The model response was not eligible for execution.');return save(db,row,d,'done','stopped');}
-   trace(d,'proposal','The proposed function is ready for Nebius Sandbox checks.');
+   trace(d,'proposal','Proposal received. Sending the candidate to Nebius Sandbox.');
    return save(db,row,d,'sandbox_start');
   }
   if(row.phase==='sandbox_start'){
    const receipt=d.receipts.at(-1);
    const bundle=await makeBundle(receipt.proposal,d.challenge,receipt.run_id);
    d.plan=bundle.private_comparison_plan;
-   trace(d,'sandbox','Nebius Sandbox is running the function against the contract.');
+   trace(d,'sandbox','Nebius Sandbox started. Running the function against the contract.');
    await db.prepare('UPDATE repair_jobs SET data=? WHERE id=? AND token=?').bind(JSON.stringify(d),row.id,row.token).run();
    const result=await startSandbox(bundle,settings);
    if(!result.operation_id)throw new Error('sandbox_'+result.failure_stage+'_'+result.error_code+'_'+(result.http_status||''));
@@ -77,7 +78,8 @@ async function advance(row,env){
    const receipt=d.receipts.at(-1);receipt.sandbox={completed:true,observations_match:compared.observations_match,trusted_execution_proven:compared.trusted_execution_proven===true};receipt.sandbox_result=compared;receipt.checks=compared.checks||[];receipt.status=compared.observations_match?'review_ready':'repair_failed';
    receipt.execution={provider:'Nebius Sandbox',operation_id:d.operation,stdout_sha256:await sha(result.stdout)};
    delete d.plan;delete d.operation;
-   trace(d,'verification',`${receipt.checks.filter(x=>x.passed).length} of ${receipt.checks.length} checks passed in Nebius Sandbox.`);
+   const failed=receipt.checks.find(x=>x.passed!==true)?.id;
+   trace(d,'verification',`${receipt.checks.filter(x=>x.passed).length} of ${receipt.checks.length} checks passed in Nebius Sandbox.${failed?` First failing check: ${failed}.`:''}`);
    if(!compared.observations_match&&d.receipts.length===1)return save(db,row,d,'correct');
    trace(d,'stop',compared.observations_match?'All declared checks passed. Review the code before using it.':'The correction did not pass every check. The bounded workflow has stopped.');
    return save(db,row,d,'done','completed');

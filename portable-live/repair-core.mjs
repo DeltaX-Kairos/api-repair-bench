@@ -184,8 +184,8 @@ for fixture in job["fixtures"]:
                         raise ContractError("request budget exhausted")
                     return self.pages[json.dumps(cursor, sort_keys=True)]
             api = FixtureAPI(fixture["pages"])
-            result = namespace[job["function_name"]](api)
             calls = api.calls
+            result = namespace[job["function_name"]](api)
         else:
             result = namespace["schema_bug"](fixture["record"], fixture["contract"])
     outcome = {"kind": "return", "value": result}

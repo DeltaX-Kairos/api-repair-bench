@@ -6,10 +6,11 @@ const TERMINAL=new Set(['completed','stopped','uncertain','failed']);
 const HISTORICAL_RESERVED=190000, JOB_RESERVATION=20000, TOTAL_LIMIT=2000000;
 const DEADLINE=Date.parse('2026-12-09T00:00:00Z');
 const now=()=>Date.now(), uuid=()=>crypto.randomUUID().replaceAll('-','');
+const visitorLimit=(env,owner)=>env.LIVE_VERIFICATION_VISITOR===owner?6:2;
 const textBytes=s=>new TextEncoder().encode(s).length;
 async function sha(s){return [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))].map(x=>x.toString(16).padStart(2,'0')).join('');}
 function trace(data,stage,message){data.trace.push({stage,message,at:now()/1000});}
-function enabled(env){return env.LIVE_ENABLED==='true'&&!!env.NEBIUS_API_KEY&&now()<DEADLINE;}
+function enabled(env){return env.LIVE_ENABLED==='true'&&!!env.NEBIUS_API_KEY&&/^aiproject-[A-Za-z0-9_-]+$/.test(env.NEBIUS_PROJECT_ID||'')&&now()<DEADLINE;}
 function response(data,status=200,cookie){return new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...(cookie?{'Set-Cookie':cookie}:{})}});}
 function publicJob(row){const d=JSON.parse(row.data);return {job_id:row.id,case:d.challenge.case,status:row.status,trace:d.trace,receipts:d.receipts,created_at:row.created/1000,needs_advance:!TERMINAL.has(row.status)&&!row.lease,phase_token:row.token};}
 async function save(db,row,d,phase,status='running'){
@@ -24,8 +25,9 @@ async function stopStale(db){
 }
 async function info(db,owner,env){
  const stats=await db.prepare('SELECT COALESCE(SUM(reserved),0) AS reserved,COUNT(*) AS jobs,COALESCE(SUM(CASE WHEN owner=? THEN 1 ELSE 0 END),0) AS visitor,COALESCE(MAX(active),0) AS active FROM repair_jobs').bind(owner).first();
- const reason=!enabled(env)?'operator_disabled':stats.active?'busy':stats.visitor>=2?'session_limit':stats.reserved+HISTORICAL_RESERVED+JOB_RESERVATION>TOTAL_LIMIT?'allowance_exhausted':null;
- return {enabled:!reason,replay_only:!!reason,reason,jobs_per_visitor:2,cases:['schema','pagination','custom'],execution_provider:'Nebius Sandbox',model_provider:'Nebius Token Factory',model:'NVIDIA Nemotron',credit_budget_usd:2};
+ const limit=visitorLimit(env,owner);
+ const reason=!enabled(env)?'operator_disabled':stats.active?'busy':stats.visitor>=limit?'session_limit':stats.reserved+HISTORICAL_RESERVED+JOB_RESERVATION>TOTAL_LIMIT?'allowance_exhausted':null;
+ return {enabled:!reason,replay_only:!!reason,reason,jobs_per_visitor:limit,cases:['schema','pagination','custom'],execution_provider:'Nebius Sandbox',model_provider:'Nebius Token Factory',model:'NVIDIA Nemotron',credit_budget_usd:2};
 }
 async function readJson(request){
  if(!/^application\/json(?:;|$)/i.test(request.headers.get('content-type')||''))throw new Error('invalid_input');
@@ -39,7 +41,7 @@ async function boundedJson(res){if(!res.ok)throw new Error('provider_http_'+res.
 async function advance(row,env){
  const db=env.DB,d=JSON.parse(row.data);
  if(!enabled(env)){trace(d,'stop','The operator has paused live execution.');return save(db,row,d,'done','stopped');}
-   const settings={apiKey:env.NEBIUS_API_KEY,projectId:env.NEBIUS_PROJECT_ID || 'your-project-id'};
+   const settings={apiKey:env.NEBIUS_API_KEY,projectId:env.NEBIUS_PROJECT_ID};
  try{
   if(row.phase==='propose'||row.phase==='correct'){
    const correcting=row.phase==='correct';
@@ -50,7 +52,13 @@ async function advance(row,env){
    const prepared=await prepareRequest(d.challenge,parent);
    const result=await boundedJson(await fetch(prepared.endpoint,{method:'POST',headers:{Authorization:'Bearer '+env.NEBIUS_API_KEY,'Content-Type':'application/json'},body:JSON.stringify(prepared.payload),redirect:'manual',signal:AbortSignal.timeout(300000)}));
    if(JSON.stringify(result).includes(env.NEBIUS_API_KEY))throw new Error('private_output');
-   const parsed=await parseProposalResponse(result,d.challenge);
+   let parsed;
+   try {parsed=await parseProposalResponse(result,d.challenge);}
+   catch(error){
+    console.error(JSON.stringify({phase:row.phase,name:'ProposalRejected',detail:String(error.message).slice(0,200)}));
+    trace(d,'stop',correcting?'The one allowed correction returned an invalid or incomplete proposal. No candidate was executed.':'The model returned an invalid or incomplete proposal. No candidate was executed.');
+    return save(db,row,d,'done','stopped');
+   }
    const receipt={...parsed,run_id:uuid(),case:d.challenge.case,challenge_sha256:d.challenge.challenge_sha256,stage:correcting?'correction':'baseline',model:{provider:'Nebius',model:'nvidia/Nemotron-3_5-Lightning',completed:true},sandbox:{completed:false,observations_match:null},checks:[]};
    d.receipts.push(receipt);
    if(parsed.status!=='awaiting_remote_sandbox'){trace(d,'stop','The model response was not eligible for execution.');return save(db,row,d,'done','stopped');}
@@ -110,7 +118,7 @@ export default {async fetch(request,env){
    await stopStale(db);
    let challenge;try{challenge=await buildChallenge(await readJson(request));}catch(_){return response({error:'invalid_input'},400,cookie);}
    const id=uuid(),token=uuid(),d={challenge,trace:[],receipts:[]};trace(d,'queued','Live repair accepted. At most two model proposals will be made.');
-   const inserted=await db.prepare('INSERT INTO repair_jobs (id,owner,status,phase,token,data,reserved,active,lease,created) SELECT ?,?,\'queued\',\'propose\',?,?,?,1,0,? WHERE (SELECT COALESCE(SUM(reserved),0) FROM repair_jobs)+?+?<=? AND (SELECT COUNT(*) FROM repair_jobs WHERE owner=?)<2 AND NOT EXISTS(SELECT 1 FROM repair_jobs WHERE active=1)').bind(id,owner,token,JSON.stringify(d),JOB_RESERVATION,now(),HISTORICAL_RESERVED,JOB_RESERVATION,TOTAL_LIMIT,owner).run();
+   const inserted=await db.prepare('INSERT INTO repair_jobs (id,owner,status,phase,token,data,reserved,active,lease,created) SELECT ?,?,\'queued\',\'propose\',?,?,?,1,0,? WHERE (SELECT COALESCE(SUM(reserved),0) FROM repair_jobs)+?+?<=? AND (SELECT COUNT(*) FROM repair_jobs WHERE owner=?)<? AND NOT EXISTS(SELECT 1 FROM repair_jobs WHERE active=1)').bind(id,owner,token,JSON.stringify(d),JOB_RESERVATION,now(),HISTORICAL_RESERVED,JOB_RESERVATION,TOTAL_LIMIT,owner,visitorLimit(env,owner)).run();
    if(!inserted.meta.changes)return response({error:'quota_exhausted'},429,cookie);
    return response(publicJob(await db.prepare('SELECT * FROM repair_jobs WHERE id=?').bind(id).first()),201,cookie);
   }

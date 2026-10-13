@@ -2,17 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFile} from 'node:fs/promises';
-import worker from '../judge-site/dist/server/index.js';
+import worker from '../deployment/test-worker-loader.mjs';
 import {makeBundle} from './repair-core.mjs';
 
 const ORIGIN='http://127.0.0.1:18770';
-const sql=await readFile(new URL('../judge-site/drizzle/0000_mysterious_sharon_ventura.sql',import.meta.url),'utf8');
+const sql=await readFile(new URL('../deployment/schema.sql',import.meta.url),'utf8');
 class D1 {
  constructor(){this.sql=new DatabaseSync(':memory:');this.sql.exec(sql);}
  prepare(sql){const stmt=this.sql.prepare(sql);let values=[];const wrapper={bind(...args){values=args;return wrapper;},async first(){return stmt.get(...values)??null;},async all(){return{results:stmt.all(...values)};},async run(){const result=stmt.run(...values);return{meta:{changes:Number(result.changes)}};}};return wrapper;}
  close(){this.sql.close();}
 }
-function fixture(t){const db=new D1();t.after(()=>db.close());return{DB:db,LIVE_ENABLED:'true',NEBIUS_API_KEY:'synthetic-credential-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'};}
+function fixture(t){const db=new D1();t.after(()=>db.close());return{DB:db,LIVE_ENABLED:'true',NEBIUS_API_KEY:'synthetic-credential-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',NEBIUS_PROJECT_ID:'aiproject-synthetic'};}
 async function request(env,path,body,cookie,method=body===undefined?'GET':'POST'){
  const headers={};if(cookie)headers.Cookie=cookie;if(method==='POST'){headers.Origin=ORIGIN;headers['Content-Type']='application/json';}
  const res=await worker.fetch(new Request(ORIGIN+path,{method,headers,...(body===undefined?{}:{body:JSON.stringify(body)})}),env);

@@ -14,6 +14,8 @@ Click **Run a repair → Invoice repair → Run live repair**. Watch the trace m
 
 ## What this is
 
+**October 13 live verification:** a fresh custom identifier repair passed **3/3 checks** in Nebius Sandbox with `nvidia/Nemotron-3_5-Lightning`, with no correction required. The older invoice **4/9 → 9/9** recording above is a separate historical run. The Sandbox 403 was traced to a missing runtime project ID, which caused a placeholder project header; configuration is corrected and admission now rejects placeholders. The trusted runner parses successfully, and malformed candidate code produces bound failed checks so one correction can be attempted. Strict proposal JSON is requested with model reasoning enabled. These observations are not a guarantee that every case succeeds.
+
 API Repair Bench is a review desk for a broken API client function when HTTP succeeded and the contract didn’t. It turns a proposed code change into bounded, inspectable evidence instead of silently deploying a guess.
 
 Built for the Nebius × NVIDIA Global AI Hackathon, Coding and Agentic Engineering track. Original synthetic application and fixtures, developed with AI assistance under founder review. This repository does not include the private DeltaX engine.
@@ -60,6 +62,7 @@ python3 -m unittest discover -v
 node ui/test-ui.cjs
 node live-ui/test-live.cjs
 node --test portable-live/test-repair-core.mjs portable-live/sandbox-rest.test.mjs
+node --test portable-live/test-worker.mjs deployment/test-runtime.mjs
 python3 cli.py results
 python3 cli.py challenge auth
 ```

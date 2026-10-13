@@ -4,19 +4,19 @@
 
 - **Live:** [repairbench.deltaxevaluate.com/live](https://repairbench.deltaxevaluate.com/live/)
 - **Replay if live allowance is used:** [saved review](https://repairbench.deltaxevaluate.com/)
-- **One sentence:** Nemotron proposes a patch, Nebius Sandbox runs your checks, one correction max, then it stops.
+- **Control boundary:** NVIDIA Nemotron proposes code; application logic binds the artifacts, runs remote validation and enforces at most one correction. The model has no deployment authority.
 
 ![Captured 4/9 to 9/9 invoice repair](docs/judges/invoice-repair-4-to-9.png)
 
-**90-second judging cut:** [watch the live repair walkthrough](https://youtu.be/MYQMYI5FR2I)
+**Two-minute functioning-app video:** [watch the identifier repair and dated invoice correction](https://youtu.be/NMmQrZ-aRzY)
 
-Click **Run a repair → Invoice repair → Run live repair**. Watch the trace move through NVIDIA Nemotron, Nebius Token Factory and Nebius Sandbox; then inspect the failed check, the one correction and the downloadable evidence. The exact click path is also in [JUDGES.md](JUDGES.md).
+Click **Run a repair → Invoice repair → Run live repair**. Watch the trace move through NVIDIA Nemotron, Nebius Token Factory and Nebius Sandbox; inspect the generated function, named checks, stopping reason and downloadable evidence. A fresh run may pass on its first proposal or use its single correction. The exact click path is also in [JUDGES.md](JUDGES.md).
 
 ## What this is
 
 **October 13 live verification:** a fresh custom identifier repair passed **3/3 checks** in Nebius Sandbox with `nvidia/Nemotron-3_5-Lightning`, with no correction required. The older invoice **4/9 → 9/9** recording above is a separate historical run. The Sandbox 403 was traced to a missing runtime project ID, which caused a placeholder project header; configuration is corrected and admission now rejects placeholders. The trusted runner parses successfully, and malformed candidate code produces bound failed checks so one correction can be attempted. Strict proposal JSON is requested with model reasoning enabled. These observations are not a guarantee that every case succeeds.
 
-API Repair Bench is a review desk for a broken API client function when HTTP succeeded and the contract didn’t. It turns a proposed code change into bounded, inspectable evidence instead of silently deploying a guess.
+**Untrusted generation. Deterministic control.** API Repair Bench is a structural control framework for AI-generated API repairs. NVIDIA Nemotron proposes code; application logic enforces the evaluation contract, remote execution path and stopping conditions. The model has no authority to deploy a patch or extend its repair loop.
 
 Built for the Nebius × NVIDIA Global AI Hackathon, Coding and Agentic Engineering track. Original synthetic application and fixtures, developed with AI assistance under founder review. This repository does not include the private DeltaX engine.
 
@@ -110,16 +110,41 @@ One correction can be requested after a completed failed baseline on the same co
 
 That command only requests the correction; verification is a separate explicit command. Missing-unit and explicit-unit decision controls can be generated with `run decision-missing_unit` or `run decision-explicit_major_unit`; their decision quality is assessed by `ambiguity_cases.score_decision`, and their patches are not executed by the current CLI. `--verify` skips these decision controls.
 
-## Architecture and limitations
+## Architecture: proposal authority without deployment authority
 
-- `challenges.py` supplies broken functions and complete public interfaces without reference answers. `inference_request.py` prepares the NVIDIA `nvidia/Nemotron-3_5-Lightning` request to Nebius Token Factory.
-- `provider_client.py` verifies model availability, reserves before a single send, accepts only complete structurally valid proposals, and saves outcomes. `budget_guard.py` prevents duplicate reservations.
-- `sandbox_bundle.py` packages only synthetic candidate, runner and job input. `sandbox_client.py` runs them remotely in Nebius Sandbox with bounded requested runtime/output. Expected results remain outside the candidate runtime.
-- `custom_cases.py` validates a single function and user-supplied JSON checks without executing the source. `live_service.py` exposes the bounded visitor/job API.
-- `pipeline.py` connects saved proposals, remote comparison and one feedback correction. `evaluation.py` separates paired corrections, changed contracts, rejections and uncertain outcomes.
-- `serve.py` is the developer review desk for locally generated receipts; `cli.py demo` serves the bundled recorded judging replay.
+API Repair Bench treats generated source as untrusted input to a bounded protocol. NVIDIA Nemotron supplies a proposal. Application code controls admission, validation, remote dispatch, comparison, correction eligibility and termination. The model cannot grant itself another attempt or a deployment capability through its response.
 
-Matching remote observations **does not prove trusted execution**: candidate code shares a process with the observation runner and can spoof output. Receipts retain `trusted_execution_proven: false`. Neither this synthetic suite nor the SDK settings establish production isolation, egress control, deletion, broad repair reliability or suitability for customer code. The recorded evaluation uses original fictional data. The live custom-function path accepts user-supplied code and checks; those examples do not prove general correctness. Generated changes are never deployed automatically.
+The hosted path has three distinct responsibilities:
+
+1. **Control plane:** validates requests and proposals, reserves attempts in durable storage, enforces stage transitions and retains outcomes.
+2. **Execution plane:** Nebius Sandbox runs the candidate and observation runner remotely. The dispatch requests no inherited environment, disabled networking, a 20-second runtime limit and a 64 KiB limit per output stream.
+3. **Comparison plane:** application code compares returned observations with an external plan, verifies their binding and records named outcomes.
+
+The remote boundary separates generated execution from the website Worker and development machine. The comparison boundary keeps the final decision logic outside the candidate runtime. These are meaningful controls, but neither establishes an independently trusted observation process: the candidate and observation runner currently share a Python process inside Sandbox.
+
+### Artifact binding
+
+Canonical challenge and proposal records receive SHA-256 digests. The execution bundle carries a run identifier, challenge digest and proposal digest; each uploaded file also receives a content digest. The adapter snapshots the bundle before asynchronous uploads, recomputes file digests, and checks provider-reported upload digests and byte counts. Comparison rejects outputs with mismatched run, challenge or proposal identifiers.
+
+These checks detect artifact substitutions or mismatches at the checked boundaries. They are not signatures, remote attestation or proof that the candidate emitted truthful observations. Receipts retain `trusted_execution_proven: false` even when the declared checks match.
+
+### Finite correction and effect control
+
+A completed, bound initial failure may receive one correction on the same contract. A passing attempt stops for review. A failed correction also stops. Invalid or incomplete proposals do not gain execution authority; uncertain effectful stages are not automatically redispatched.
+
+Durable phase tokens and stage leases constrain progression, and reservations gate admission. These controls bound this application's workflow. They do not create a provider-enforced or account-wide spending cap. Deterministic control logic does not make probabilistic model output deterministic or prove arbitrary Python safe.
+
+### Observable failure is an architectural property
+
+The evidence model distinguishes proposal rejection, failed contract checks, infrastructure faults, incomplete provider responses, uncertain effects and changed contracts. A changed interface starts a different evaluation. A successful correction retains its baseline so recovered checks and regressions can be examined.
+
+The September 11 invoice recording shows one same-contract 4/9 → 9/9 correction. The October 13 identifier recording shows a separate 3/3 initial proposal. These are observed synthetic runs, not general reliability measurements or proof of production readiness.
+
+### Next engineering gate
+
+Establish an observation boundary that candidate code cannot control: separate runner and candidate processes; restrict validation telemetry and filesystem access; keep comparison material and control credentials outside candidate reach; authenticate observation provenance independently of candidate-generated stdout; and exercise these boundaries with adversarial tests.
+
+Repository-wide operation additionally requires explicit limits on file access, permitted changes, test execution and approval. Broader scope should follow verified boundaries, rather than confer broader authority on the model by default. Export remains distinct from merge or deployment.
 
 ## Recorded outcomes
 

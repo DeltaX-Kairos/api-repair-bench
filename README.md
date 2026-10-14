@@ -14,7 +14,7 @@ Click **Run a repair → Your function → Run live repair** to try the prefille
 
 ## What this is
 
-**October 13 live verification:** separate browser recordings show a custom identifier repair passing **3/3 checks** on the updated site and an invoice repair passing **9/9 checks** on an earlier interface revision, both on the first proposal using `nvidia/Nemotron-3_5-Lightning` and Nebius Sandbox. A separate invoice attempt was rejected at the model response-length limit before candidate execution. The September 11 invoice **4/9 → 9/9** correction above is an archived run under the same contract, not one of these October outcomes. The Sandbox 403 was traced to a missing runtime project ID, which caused a placeholder project header; configuration is corrected and admission now rejects placeholders. The observation runner parses successfully, and malformed candidate code produces bound failed checks so one correction can be attempted. Strict proposal JSON is requested with model reasoning enabled. These observations are not a guarantee that every case succeeds.
+**Demonstration provenance:** the filmed October 13 updated-site identifier repair passed **3/3 checks** on its first proposal using `nvidia/Nemotron-3_5-Lightning` and Nebius Sandbox. The **4/9 → 9/9** invoice correction is a separately dated September 11 archive. Other outcomes remain in the technical evidence rather than the short entry film. These small fictional cases are observed results, not a reliability estimate. The earlier Sandbox 403 was traced to a missing runtime project ID; configuration is corrected and admission now rejects placeholders.
 
 **Untrusted generation. Deterministic control.** API Repair Bench is a structural control framework for AI-generated API repairs. NVIDIA Nemotron proposes code; application logic enforces the evaluation contract, remote execution path and stopping conditions. The model has no authority to deploy a patch or extend its repair loop.
 
@@ -138,7 +138,7 @@ Durable phase tokens and stage leases constrain progression, and reservations ga
 
 The evidence model distinguishes proposal rejection, failed contract checks, infrastructure faults, incomplete provider responses, uncertain effects and changed contracts. A changed interface starts a different evaluation. A successful correction retains its baseline so recovered checks and regressions can be examined.
 
-The product demo combines two clearly dated, distinct records: an October 13 updated-site identifier repair passing 3/3 on its first proposal, and an excerpt of the September 11 invoice run correcting 4/9 to 9/9 under the same contract. Other October attempts, including an incomplete model response and a separate first-proposal invoice success, remain in the technical evidence. None establishes general reliability or independent execution attestation.
+The product demo combines two clearly dated, distinct records: an October 13 updated-site identifier repair passing 3/3 on its first proposal, and an excerpt of the September 11 invoice run correcting 4/9 to 9/9 under the same contract. Other attempts remain in the technical evidence. Neither filmed outcome establishes general reliability or independent execution attestation.
 
 ### Next engineering gate
 

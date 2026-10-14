@@ -8,13 +8,13 @@
 
 ![September 11 captured 4/9 to 9/9 invoice repair](docs/judges/invoice-repair-4-to-9.png)
 
-**Product demo (2:18):** [watch the browser repair and bounded correction](https://www.youtube.com/watch?v=tBvU--pGRlY). A real updated-site October 13 identifier run passes **3/3** on its initial proposal; a separately dated September 11 invoice recording shows **4/9 → 9/9** after one same-contract correction. The film follows timestamped browser captures, with long provider waits and capture gaps labeled as trimmed. It shows named checks, generated code and the stop for review.
+**Product demo (1:29):** [watch two fresh live browser runs](https://www.youtube.com/watch?v=eyNeHHAj5Mc). On October 13, the identifier repair passed **3/3** checks and the pagination repair passed **4/4**. Each is a separate, continuous recording from launch through its stopping result. Both passed on their first proposal; the video does not show a correction. The earlier **4/9 → 9/9** invoice correction remains in the saved replay and technical evidence.
 
 Click **Run a repair → Your function → Run live repair** to try the prefilled identifier example when the public allowance remains. Watch the trace move through NVIDIA Nemotron, Nebius Token Factory and Nebius Sandbox; inspect the generated function, named checks, stopping reason and downloadable evidence. A fresh run may differ from the recording. The exact click path is also in [JUDGES.md](JUDGES.md).
 
 ## What this is
 
-**Demonstration provenance:** the filmed October 13 updated-site identifier repair passed **3/3 checks** on its first proposal using `nvidia/Nemotron-3_5-Lightning` and Nebius Sandbox. The **4/9 → 9/9** invoice correction is a separately dated September 11 archive. Other outcomes remain in the technical evidence rather than the short entry film. These small fictional cases are observed results, not a reliability estimate. The earlier Sandbox 403 was traced to a missing runtime project ID; configuration is corrected and admission now rejects placeholders.
+**Demonstration provenance:** the filmed October 13 updated-site identifier and pagination repairs passed **3/3** and **4/4** checks, respectively, on their first proposals using `nvidia/Nemotron-3_5-Lightning` and Nebius Sandbox. The **4/9 → 9/9** invoice correction is a separate September 11 archive, not part of this film. Other outcomes remain in the technical evidence. These small fictional cases are observed results, not a reliability estimate. The earlier Sandbox 403 was traced to a missing runtime project ID; configuration is corrected and admission now rejects placeholders.
 
 **Untrusted generation. Deterministic control.** API Repair Bench is a structural control framework for AI-generated API repairs. NVIDIA Nemotron proposes code; application logic enforces the evaluation contract, remote execution path and stopping conditions. The model has no authority to deploy a patch or extend its repair loop.
 
@@ -36,7 +36,7 @@ Choose an integration, compare the source and reference repair, inspect the chec
 
 The default public page remains the recorded review. The new `/live` workspace adds an explicit run button, progress trace, generated source, check outcomes and downloadable evidence. A visitor can select the fictional data-conversion example or supply one Python function with one to eight JSON checks. Jobs have a bounded proposal → Sandbox test → optional single correction → final result workflow. A missing or uncertain provider response is retained as unresolved, not automatically retried.
 
-The public route has now completed a real browser-triggered run: the initial Invoice repair proposal passed 4/9 checks, the bounded correction passed 9/9, and the workflow stopped without deployment. That result is one observed run, not a reliability guarantee; historical recorded outcomes below remain separate.
+An earlier public browser-triggered Invoice run passed 4/9 checks on its initial proposal, then 9/9 after one bounded correction, and stopped without deployment. The October 13 identifier and pagination runs in the product demo each passed on the first proposal. These are distinct observed runs, not a reliability guarantee; historical recorded outcomes below remain separate.
 
 The live workspace also includes a pagination case built around a real incident pattern: an HTTP 200 response dropped page 2. It checks empty pages, duplicate occurrences, repeated cursors and the request budget. See the concrete [incident card](docs/incident.md).
 
@@ -138,7 +138,7 @@ Durable phase tokens and stage leases constrain progression, and reservations ga
 
 The evidence model distinguishes proposal rejection, failed contract checks, infrastructure faults, incomplete provider responses, uncertain effects and changed contracts. A changed interface starts a different evaluation. A successful correction retains its baseline so recovered checks and regressions can be examined.
 
-The product demo combines two clearly dated, distinct records: an October 13 updated-site identifier repair passing 3/3 on its first proposal, and an excerpt of the September 11 invoice run correcting 4/9 to 9/9 under the same contract. Other attempts remain in the technical evidence. Neither filmed outcome establishes general reliability or independent execution attestation.
+The product demo shows two distinct October 13 updated-site runs: identifier passed 3/3 and pagination passed 4/4, each on its first proposal. It does not show a correction. The September 11 invoice 4/9 → 9/9 correction and other attempts remain in the saved replay and technical evidence. Neither filmed outcome establishes general reliability or independent execution attestation.
 
 ### Next engineering gate
 
@@ -157,7 +157,7 @@ See the replay and `demo/evidence.json` for the frozen aggregate, and `demo/reco
 | Data conversion, initial feedback | 4/9 | 4/9 | No recovery |
 | Data conversion, runtime exception diagnostics | 4/9 | 9/9 | Same-contract correction recovered five checks; zero check regressions |
 
-The final data-conversion result is one successful paired correction among three evaluated pairs. Both amount-unit decision controls matched their expected decisions; those are decision checks, not patch-runtime checks. Pagination did not yield a valid patch. All 16 model attempts remain represented: 14 returned responses and two uncertain timeouts. These small synthetic results do not establish general repair reliability.
+The final data-conversion result is one successful paired correction among three evaluated pairs. Both amount-unit decision controls matched their expected decisions; those are decision checks, not patch-runtime checks. Pagination did not yield a valid patch in this historical series; the separately recorded October 13 hosted run passed 4/4. All 16 historical model attempts remain represented: 14 returned responses and two uncertain timeouts. These small synthetic results do not establish general repair reliability.
 
 ## License and attribution
 

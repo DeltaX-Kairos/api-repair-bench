@@ -240,7 +240,7 @@ function paginationFixtures(){
   ]},expected:{kind:'error',type:'ContractError'},calls:[null,'loop']});
   const pages=[{cursor:null,page:{items:['first'],next:'p1'}}];
   for(let i=1;i<=10;i++) pages.push({cursor:'p'+i,page:{items:['item-'+i],next:i<10?'p'+(i+1):null}});
-  cases.push({fixture:{id:'request-budget',pages},expected:{kind:'error',type:'ContractError'},calls:[null,...Array.from({length:10},(_,i)=>'p'+(i+1))]});
+  cases.push({fixture:{id:'request-budget',pages},expected:{kind:'error',type:'ContractError'},calls:[null,...Array.from({length:9},(_,i)=>'p'+(i+1))]});
   return {fixtures:cases.map(row=>row.fixture),expected:cases.map(row=>({id:row.fixture.id,outcome:row.expected,calls:row.calls}))};
 }
 

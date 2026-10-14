@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {execFileSync} from 'node:child_process';
+import {mkdtemp,rm,writeFile} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import {buildChallenge,prepareRequest,parseProposalResponse,makeBundle,compareResult,parseStrictJSON,digest,canonical,REMOTE_RUNNER} from './repair-core.mjs';
+import * as deployedCore from '../deployment/repair-core.mjs';
 const proposalFor = r=>({challenge_sha256:r.challenge_sha256,decision:'patch',source:r.candidate_source,explanation:'Original synthetic proposal'});
 const responseFor=p=>({choices:[{finish_reason:'stop',message:{content:JSON.stringify(p)}}],usage:{prompt_tokens:100,completion_tokens:200}});
 const custom = ()=>({source:'def total(items):\n    return 0\n',checks:{description:'Return the sum of the supplied numeric values.',checks:[{id:'nonempty',args:[[1,2]],expected:3},{id:'empty',args:[[]],expected:0}]}});
@@ -30,6 +35,43 @@ test('pagination challenge binds empty pages, duplicate items and cursor safety'
   assert.equal(bundle.private_comparison_plan.expected_observations.length,4);
   assert.deepEqual(bundle.private_comparison_plan.expected_observations.map(row=>row.id),['all-pages','empty-page','repeated-cursor','request-budget']);
   assert.match(bundle.upload_files['runner.py'],/FixtureAPI/);
+});
+
+test('pagination request-budget accepts a compliant patch before an eleventh fetch',async()=>{
+  const source=`def pagination_bug(api):
+    items = []
+    cursor = None
+    seen = set()
+    requests = 0
+    while True:
+        if cursor in seen:
+            raise ContractError('repeated pagination cursor')
+        if requests >= 10:
+            raise ContractError('request budget exhausted')
+        seen.add(cursor)
+        page = api.fetch(cursor)
+        requests += 1
+        items.extend(page['items'])
+        cursor = page['next']
+        if cursor is None:
+            return items
+`;
+  for(const core of [{buildChallenge,makeBundle,compareResult},deployedCore]){
+    const req=await core.buildChallenge({case:'pagination'});
+    const bundle=await core.makeBundle({challenge_sha256:req.challenge_sha256,decision:'patch',source,explanation:'Bounded pagination patch.'},req,'pagination-budget-regression');
+    const budget=bundle.private_comparison_plan.expected_observations.find(row=>row.id==='request-budget');
+    assert.deepEqual(budget.calls,[null,...Array.from({length:9},(_,i)=>`p${i+1}`)]);
+    const dir=await mkdtemp(join(tmpdir(),'repair-pagination-'));
+    try {
+      await Promise.all(Object.entries(bundle.upload_files).map(([name,content])=>writeFile(join(dir,name),content)));
+      const stdout=execFileSync('python3',['-I','runner.py'],{cwd:dir,encoding:'utf8'});
+      const result=await core.compareResult(bundle.private_comparison_plan,stdout,{exit_code:0});
+      assert.equal(result.observations_match,true,`Compliant patch failed: ${JSON.stringify(result.mismatches)}`);
+      assert.deepEqual(result.checks.map(check=>check.passed),[true,true,true,true]);
+    } finally {
+      await rm(dir,{recursive:true,force:true});
+    }
+  }
 });
 
 test('custom checks reject ambiguous fields and bind immutable examples',async()=>{

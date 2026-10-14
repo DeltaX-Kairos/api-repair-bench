@@ -15,9 +15,9 @@
     credential_unavailable: 'The live provider connection is not configured. Saved results remain available.',
     operator_disabled: 'New runs are currently switched off. Explore the saved results instead.',
     busy: 'A repair is already running. New submissions are paused until it finishes.',
-    allowance_exhausted: 'Live allowance used — watch the two fresh recordings above.',
-    session_limit: 'Live allowance used — watch the two fresh recordings above.',
-    visitor_limit: 'Live allowance used — watch the two fresh recordings above.'
+    allowance_exhausted: 'Live allowance used — watch the recorded repair and correction above.',
+    session_limit: 'Live allowance used — watch the recorded repair and correction above.',
+    visitor_limit: 'Live allowance used — watch the recorded repair and correction above.'
   };
   function availabilityMessage(status) {
     if (['session_limit', 'visitor_limit'].includes(status.reason) && Number.isInteger(status.limits?.jobs_per_visitor))

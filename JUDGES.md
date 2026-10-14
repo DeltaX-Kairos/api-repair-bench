@@ -12,6 +12,6 @@ If the live allowance is used, open the [saved replay](https://repairbench.delta
 
 Model output has proposal authority only. Application code enforces artifact binding, remote dispatch, result eligibility and a finite correction protocol. Candidate execution is remote; final comparison is external. The observation runner still shares the candidate process, so passing checks do not establish independently attested execution.
 
-[Watch the product demo (70 seconds)](https://www.youtube.com/watch?v=ItCdDmoJjgw): an updated-site October 13 identifier run passes **3/3** on its initial proposal, followed by a clearly dated September 11 invoice correction from **4/9 → 9/9**. Waiting time is trimmed; each recording keeps its own provenance and stop.
+[Watch the product demo (2:18)](https://www.youtube.com/watch?v=tBvU--pGRlY): an updated-site October 13 identifier run passes **3/3** on its initial proposal, followed by a clearly dated September 11 invoice correction from **4/9 → 9/9**. Provider waits and capture gaps are trimmed and labeled; each recording keeps its own provenance and stop.
 
 The [longer correction recording](https://youtu.be/NMmQrZ-aRzY) retains the full September 11 invoice recovery. The short product demo uses a clearly dated excerpt of that earlier run; it is not an October outcome.

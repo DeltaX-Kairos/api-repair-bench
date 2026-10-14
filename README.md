@@ -8,7 +8,7 @@
 
 ![September 11 captured 4/9 to 9/9 invoice repair](docs/judges/invoice-repair-4-to-9.png)
 
-**Product demo (70 seconds):** [watch the browser repair and bounded correction](https://www.youtube.com/watch?v=ItCdDmoJjgw). A real updated-site October 13 identifier run passes **3/3** on its initial proposal; a separately dated September 11 invoice recording shows **4/9 → 9/9** after one same-contract correction. The film shows browser operation, named checks, generated code and the stop for review.
+**Product demo (2:18):** [watch the browser repair and bounded correction](https://www.youtube.com/watch?v=tBvU--pGRlY). A real updated-site October 13 identifier run passes **3/3** on its initial proposal; a separately dated September 11 invoice recording shows **4/9 → 9/9** after one same-contract correction. The film follows timestamped browser captures, with long provider waits and capture gaps labeled as trimmed. It shows named checks, generated code and the stop for review.
 
 Click **Run a repair → Your function → Run live repair** to try the prefilled identifier example when the public allowance remains. Watch the trace move through NVIDIA Nemotron, Nebius Token Factory and Nebius Sandbox; inspect the generated function, named checks, stopping reason and downloadable evidence. A fresh run may differ from the recording. The exact click path is also in [JUDGES.md](JUDGES.md).
 

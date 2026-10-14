@@ -42,16 +42,14 @@ test('bound candidate syntax failures are failed checks eligible for one correct
   assert.deepEqual(next.payload.response_format.json_schema.schema.properties.challenge_sha256.enum,[challenge.challenge_sha256]);
 });
 
-test('the bounded verification allowance applies only to its selected visitor',async()=>{
+test('ordinary visitor limits cannot be expanded by leftover recording settings',async()=>{
   const cookie='a'.repeat(64);
   const owner=[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(cookie)))].map(v=>v.toString(16).padStart(2,'0')).join('');
   const DB={prepare(){return {bind(){return this;},async all(){return {results:[]};},async first(){return {reserved:40000,jobs:2,visitor:2,active:0};}};}};
-  const env={DB,LIVE_ENABLED:'true',NEBIUS_API_KEY:'synthetic-key',NEBIUS_PROJECT_ID:'aiproject-synthetic'};
-  const read=async extra=>(await (await worker.fetch(new Request('http://127.0.0.1:18770/api/live/status',{headers:{Cookie:'repair_visitor='+cookie}}),{...env,...extra})).json());
-  assert.equal((await read({})).enabled,false);
-  assert.equal((await read({LIVE_VERIFICATION_VISITOR:'unrelated-visitor'})).enabled,false);
-  const permitted=await read({LIVE_VERIFICATION_VISITOR:owner});
-  assert.equal(permitted.enabled,true);
-  assert.equal(permitted.jobs_per_visitor,6);
-  assert.equal(permitted.credit_budget_usd,2);
+  const env={DB,LIVE_ENABLED:'true',NEBIUS_API_KEY:'synthetic-key',NEBIUS_PROJECT_ID:'aiproject-synthetic',LIVE_VERIFICATION_VISITOR:owner,LIVE_VERIFICATION_LIMIT:'7',LIVE_VERIFICATION_UNTIL:new Date(Date.now()+1200000).toISOString()};
+  const result=await (await worker.fetch(new Request('http://127.0.0.1:18770/api/live/status',{headers:{Cookie:'repair_visitor='+cookie}}),env)).json();
+  assert.equal(result.enabled,false);
+  assert.equal(result.reason,'session_limit');
+  assert.equal(result.jobs_per_visitor,2);
+  assert.equal(result.credit_budget_usd,2);
 });

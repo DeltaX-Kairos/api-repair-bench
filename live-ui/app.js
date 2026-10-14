@@ -15,9 +15,9 @@
     credential_unavailable: 'The live provider connection is not configured. Saved results remain available.',
     operator_disabled: 'New runs are currently switched off. Explore the saved results instead.',
     busy: 'A repair is already running. New submissions are paused until it finishes.',
-    allowance_exhausted: 'The live demonstration allowance has been used. Saved evidence remains available.',
-    session_limit: 'This browser session has used its live run allowance. You can inspect and download its evidence.',
-    visitor_limit: 'This browser session has used its live run allowance. You can inspect and download its evidence.'
+    allowance_exhausted: 'Live allowance used — watch the two fresh recordings above.',
+    session_limit: 'Live allowance used — watch the two fresh recordings above.',
+    visitor_limit: 'Live allowance used — watch the two fresh recordings above.'
   };
   function availabilityMessage(status) {
     if (['session_limit', 'visitor_limit'].includes(status.reason) && Number.isInteger(status.limits?.jobs_per_visitor))
@@ -133,9 +133,22 @@
     latest = job;
     $('empty-state').hidden = true;
     $('run-state').textContent = title(job.status);
+    const receipts = Array.isArray(job.receipts) ? job.receipts : [];
+    const finalReceipt = receipts.at(-1);
+    const finalChecks = Array.isArray(finalReceipt?.checks) ? finalReceipt.checks : [];
+    const passed = finalChecks.filter(check => check.passed === true).length;
+    const firstFailed = finalChecks.find(check => check.passed !== true)?.id;
+    const baselineFailed = receipts.find(receipt => receipt.stage === 'baseline')?.checks?.find(check => check.passed !== true)?.id;
+    const focusFailed = firstFailed || baselineFailed;
     const summaries = {queued: 'Queued. The server will start this run when ready.', running: 'Working through the bounded repair workflow.', completed: 'Run complete. Inspect each proposal and its observed checks below.', stopped: 'The workflow stopped. Review the trace for its stopping reason.', uncertain: 'An execution outcome is uncertain. It has not been counted as a pass and will not be retried automatically.', failed: 'The workflow could not finish. The trace records where it stopped.'};
-    $('run-summary').textContent = summaries[job.status] || 'Waiting for the next update.';
-    $('trace').replaceChildren();
+    let summary = summaries[job.status] || 'Waiting for the next update.';
+    if (TERMINAL.has(job.status) && finalChecks.length) {
+      summary = passed === finalChecks.length && receipts.length > 1 ? 'Stopped because the one allowed correction passed all checks.'
+        : passed === finalChecks.length ? 'Stopped because the proposal passed all checks.'
+        : `Stopped: one correction used; ${passed}/${finalChecks.length} checks passed${firstFailed ? `, first failing check: ${title(firstFailed)}` : ''}.`;
+    }
+    $('run-summary').textContent = summary;
+    $('trace').replaceChildren(); $('trace-focus').hidden = true; $('trace-focus').textContent = '';
     const trace = Array.isArray(job.trace) ? job.trace : [];
     for (const item of trace.slice(-40)) {
       const li = el('li'); li.append(el('strong', title(item.stage)));
@@ -150,8 +163,9 @@
     $('step-test').classList.toggle('active', /sandbox|verif|test/.test(stageText));
     $('step-correct').classList.toggle('active', /correct/.test(stageText));
     $('step-stop').classList.toggle('active', TERMINAL.has(job.status));
+    if (focusFailed) { $('trace-focus').textContent = `First failing check observed: ${title(focusFailed)}`; $('trace-focus').hidden = false; }
     $('attempts').replaceChildren();
-    for (const receipt of (Array.isArray(job.receipts) ? job.receipts : [])) {
+    for (const receipt of receipts) {
       const card = el('article', undefined, 'attempt');
       const top = el('div', undefined, 'attempt-top');
       top.append(el('h3', receipt.stage === 'correction' ? 'Correction proposal' : 'Initial proposal'));
@@ -218,13 +232,19 @@
     finally { $('new-run').disabled = false; }
   });
   for (const radio of document.querySelectorAll('input[name="mode"]')) radio.addEventListener('change', () => {
-    const custom = document.querySelector('input[name="mode"]:checked').value === 'custom';
-    $('custom-panel').hidden = !custom; $('case-panel').hidden = custom; message('form-error', '');
+    const mode = document.querySelector('input[name="mode"]:checked').value;
+    const custom = mode === 'custom';
+    $('custom-panel').hidden = !custom; $('case-panel').hidden = custom;
+    $('schema-panel').hidden = mode !== 'schema'; $('pagination-panel').hidden = mode !== 'pagination';
+    message('form-error', '');
   });
   $('repair-form').addEventListener('submit', async event => {
     event.preventDefault(); if ($('start').disabled) return;
     message('form-error', ''); let payload;
-    try { payload = document.querySelector('input[name="mode"]:checked').value === 'custom' ? customPayload($('source').value, $('checks').value) : {case: 'schema'}; }
+    try {
+      const mode = document.querySelector('input[name="mode"]:checked').value;
+      payload = mode === 'custom' ? customPayload($('source').value, $('checks').value) : {case: mode};
+    }
     catch (error) { message('form-error', error.message); return; }
     $('start').disabled = true;
     try { const job = await client.start(payload); storage(client.jobId); $('download').textContent = 'Download evidence ↓'; render(job); poll(); }

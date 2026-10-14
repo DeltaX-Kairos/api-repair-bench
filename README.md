@@ -6,15 +6,15 @@
 - **Replay if live allowance is used:** [saved review](https://repairbench.deltaxevaluate.com/)
 - **Control boundary:** NVIDIA Nemotron proposes code; application logic binds the artifacts, runs remote validation and enforces at most one correction. The model has no deployment authority.
 
-![Captured 4/9 to 9/9 invoice repair](docs/judges/invoice-repair-4-to-9.png)
+![September 11 captured 4/9 to 9/9 invoice repair](docs/judges/invoice-repair-4-to-9.png)
 
-**Two-minute functioning-app video:** [watch the identifier repair and dated invoice correction](https://youtu.be/NMmQrZ-aRzY)
+**Fresh functioning-app video (1:56):** [watch two October 13 browser runs](https://youtu.be/c3LWDFLwsoo): identifier repair passes 3/3 on the initial proposal; an incomplete invoice response is rejected before candidate execution. The dated September 11 correction above remains a separate historical result.
 
 Click **Run a repair → Invoice repair → Run live repair**. Watch the trace move through NVIDIA Nemotron, Nebius Token Factory and Nebius Sandbox; inspect the generated function, named checks, stopping reason and downloadable evidence. A fresh run may pass on its first proposal or use its single correction. The exact click path is also in [JUDGES.md](JUDGES.md).
 
 ## What this is
 
-**October 13 live verification:** a fresh custom identifier repair passed **3/3 checks** in Nebius Sandbox with `nvidia/Nemotron-3_5-Lightning`, with no correction required. The older invoice **4/9 → 9/9** recording above is a separate historical run. The Sandbox 403 was traced to a missing runtime project ID, which caused a placeholder project header; configuration is corrected and admission now rejects placeholders. The trusted runner parses successfully, and malformed candidate code produces bound failed checks so one correction can be attempted. Strict proposal JSON is requested with model reasoning enabled. These observations are not a guarantee that every case succeeds.
+**October 13 live verification:** two fresh recordings from the updated site show a custom identifier repair passing **3/3 checks** in Nebius Sandbox with `nvidia/Nemotron-3_5-Lightning`, with no correction required, and a nine-check invoice proposal rejected when its response reached the model length limit. No candidate was admitted or executed for the invoice run. The older invoice **4/9 → 9/9** recording above is a separate historical run. The Sandbox 403 was traced to a missing runtime project ID, which caused a placeholder project header; configuration is corrected and admission now rejects placeholders. The observation runner parses successfully, and malformed candidate code produces bound failed checks so one correction can be attempted. Strict proposal JSON is requested with model reasoning enabled. These observations are not a guarantee that every case succeeds.
 
 **Untrusted generation. Deterministic control.** API Repair Bench is a structural control framework for AI-generated API repairs. NVIDIA Nemotron proposes code; application logic enforces the evaluation contract, remote execution path and stopping conditions. The model has no authority to deploy a patch or extend its repair loop.
 
@@ -138,7 +138,7 @@ Durable phase tokens and stage leases constrain progression, and reservations ga
 
 The evidence model distinguishes proposal rejection, failed contract checks, infrastructure faults, incomplete provider responses, uncertain effects and changed contracts. A changed interface starts a different evaluation. A successful correction retains its baseline so recovered checks and regressions can be examined.
 
-The September 11 invoice recording shows one same-contract 4/9 → 9/9 correction. The October 13 identifier recording shows a separate 3/3 initial proposal. These are observed synthetic runs, not general reliability measurements or proof of production readiness.
+The September 11 invoice recording shows one same-contract 4/9 → 9/9 correction. The fresh October 13 video shows a separate 3/3 identifier proposal and an incomplete invoice proposal rejected before candidate execution. It does not claim a fresh correction. These are observed synthetic runs, not general reliability measurements or proof of production readiness.
 
 ### Next engineering gate
 

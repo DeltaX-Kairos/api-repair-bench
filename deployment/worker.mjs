@@ -6,7 +6,7 @@ const TERMINAL=new Set(['completed','stopped','uncertain','failed']);
 const HISTORICAL_RESERVED=190000, JOB_RESERVATION=20000, TOTAL_LIMIT=2000000;
 const DEADLINE=Date.parse('2026-12-09T00:00:00Z');
 const now=()=>Date.now(), uuid=()=>crypto.randomUUID().replaceAll('-','');
-const visitorLimit=(env,owner)=>env.LIVE_VERIFICATION_VISITOR===owner?6:2;
+const visitorLimit=()=>2;
 const textBytes=s=>new TextEncoder().encode(s).length;
 async function sha(s){return [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))].map(x=>x.toString(16).padStart(2,'0')).join('');}
 function trace(data,stage,message){data.trace.push({stage,message,at:now()/1000});}

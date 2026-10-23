@@ -9,7 +9,11 @@ from evaluation import summarize
 ROOT = Path(__file__).resolve().parent
 ASSETS = {'/': ('index.html', 'text/html'), '/index.html': ('index.html', 'text/html'),
           '/styles.css': ('styles.css', 'text/css'), '/app.js': ('app.js', 'text/javascript'),
-          '/demo-data.js': ('demo-data.js', 'text/javascript')}
+          '/demo-data.js': ('demo-data.js', 'text/javascript'),
+          '/recorded-data.js': ('recorded-data.js', 'text/javascript'),
+          '/recorded-review.js': ('recorded-review.js', 'text/javascript'),
+          '/evidence.json': ('evidence.json', 'application/json'),
+          '/runs.json': ('runs.json', 'application/json')}
 
 
 def evidence():

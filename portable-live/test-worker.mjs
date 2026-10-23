@@ -41,7 +41,7 @@ test('SQLite admission atomically limits concurrent active jobs and budget inclu
  const jobs=await Promise.all([create(env),create(env)]);
  assert.deepEqual(jobs.map(j=>j.status).sort(),[201,429]);
  assert.equal(env.DB.sql.prepare('SELECT COUNT(*) AS n FROM repair_jobs').get().n,1);
- env.DB.sql.prepare("UPDATE repair_jobs SET active=NULL,status='completed',reserved=1790001").run();
+ env.DB.sql.prepare("UPDATE repair_jobs SET active=NULL,status='completed',reserved=24750001").run();
  assert.equal((await create(env)).status,429);
  assert.equal((await request(env,'/api/live/status')).data.reason,'allowance_exhausted');
 });
@@ -144,8 +144,8 @@ test('verified failure supplies bounded diagnostics to exactly one correction',a
 test('expired service stops queued jobs without provider access',async t=>{
  const env=fixture(t);installFetch(t,()=>assert.fail('Unexpected network'));
  const originalNow=Date.now;
- Date.now=()=>Date.parse('2026-12-08T23:59:59Z');t.after(()=>Date.now=originalNow);
- const job=await create(env);Date.now=()=>Date.parse('2026-12-09T00:00:01Z');
+ Date.now=()=>Date.parse('2027-01-02T07:59:59Z');t.after(()=>Date.now=originalNow);
+ const job=await create(env);Date.now=()=>Date.parse('2027-01-02T08:00:01Z');
  assert.equal((await request(env,'/api/live/status',undefined,job.cookie)).data.enabled,false);
  assert.equal((await step(env,job.data,job.cookie)).data.status,'stopped');
  assert.equal((await create(env)).status,403);

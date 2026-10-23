@@ -3,7 +3,7 @@
 import {readFile} from 'node:fs/promises';
 let source=await readFile(new URL('./worker.mjs',import.meta.url),'utf8');
 source=source.replace("import assets from './assets.mjs';",'const assets={};');
-for(const name of ['repair-core.mjs','sandbox-rest.mjs']){
+for(const name of ['repair-core.mjs','sandbox-rest.mjs','live-policy.mjs']){
   source=source.replace(`'./${name}'`,JSON.stringify(new URL(`./${name}`,import.meta.url).href));
 }
 export default (await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'))).default;

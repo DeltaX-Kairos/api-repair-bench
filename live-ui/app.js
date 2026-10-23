@@ -13,15 +13,21 @@
   };
   const UNAVAILABLE = {
     credential_unavailable: 'The live provider connection is not configured. Saved results remain available.',
+    provider_unconfigured: 'The live provider connection is not configured. Saved results remain available.',
+    judging_window_ended: 'The funded judging window has ended. The recorded repairs and archived evidence remain available.',
     operator_disabled: 'New runs are currently switched off. Explore the saved results instead.',
     busy: 'A repair is already running. New submissions are paused until it finishes.',
-    allowance_exhausted: 'Live allowance used — watch the recorded repair and correction above.',
-    session_limit: 'Live allowance used — watch the recorded repair and correction above.',
-    visitor_limit: 'Live allowance used — watch the recorded repair and correction above.'
+    allowance_exhausted: 'The project run allowance is used. Watch the two recorded live repairs or inspect the separate archived correction.',
+    session_limit: 'This browser has reached its rolling live-run limit. Recorded repairs and evidence remain available.',
+    visitor_limit: 'This browser has reached its rolling live-run limit. Recorded repairs and evidence remain available.'
   };
   function availabilityMessage(status) {
-    if (['session_limit', 'visitor_limit'].includes(status.reason) && Number.isInteger(status.limits?.jobs_per_visitor))
-      return `This browser session has used its ${status.limits.jobs_per_visitor} live runs. You can inspect and download its evidence.`;
+    const limit = status.jobs_per_visitor ?? status.limits?.jobs_per_visitor;
+    if (['session_limit', 'visitor_limit'].includes(status.reason) && Number.isInteger(limit)) {
+      const reset = status.visitor_reset_at && new Date(status.visitor_reset_at);
+      const when = reset && !Number.isNaN(reset.getTime()) ? ` Another run becomes available after ${reset.toLocaleString([], {dateStyle:'medium', timeStyle:'short'})}.` : '';
+      return `This browser has used its ${limit} live runs in the rolling 24-hour window.${when} You can still inspect and download saved evidence.`;
+    }
     return UNAVAILABLE[status.reason] || 'New runs are currently unavailable. Explore saved results using the replay link above.';
   }
   function bytes(text) { return new TextEncoder().encode(text).length; }
@@ -58,7 +64,7 @@
       try { data = await response.json(); }
       catch (_) { const error = new Error('The server returned an unreadable response.'); error.ambiguous = true; throw error; }
       if (!response.ok) {
-        const error = new Error(ERRORS[data.error] || (response.status === 429 ? 'Run capacity is currently unavailable. Please return to the saved results.' : response.status === 403 ? 'Live access is unavailable for this session.' : response.status === 400 ? 'The function or checks were not accepted. Review the input requirements.' : 'The server could not complete this request.'));
+        const error = new Error((data.reason ? availabilityMessage(data) : null) || ERRORS[data.error] || (response.status === 429 ? 'Run capacity is currently unavailable. Please return to the saved results.' : response.status === 403 ? 'Live access is unavailable for this session.' : response.status === 400 ? 'The function or checks were not accepted. Review the input requirements.' : 'The server could not complete this request.'));
         error.ambiguous = response.status >= 500;
         throw error;
       }
@@ -112,7 +118,7 @@
       return status;
     }
   }
-  if (typeof module !== 'undefined' && module.exports) module.exports = {LiveClient, customPayload, TERMINAL};
+  if (typeof module !== 'undefined' && module.exports) module.exports = {LiveClient, customPayload, TERMINAL, availabilityMessage};
   if (!global.document) return;
   const $ = id => document.getElementById(id);
   const client = new LiveClient(global.fetch.bind(global));
@@ -148,6 +154,10 @@
         : `Stopped: one correction used; ${passed}/${finalChecks.length} checks passed${firstFailed ? `, first failing check: ${title(firstFailed)}` : ''}.`;
     }
     $('run-summary').textContent = summary;
+    const lastTrace = Array.isArray(job.trace) ? job.trace.at(-1) : null;
+    $('live-progress').hidden = TERMINAL.has(job.status);
+    $('progress-title').textContent = lastTrace ? title(lastTrace.stage) : 'Run accepted';
+    $('progress-detail').textContent = lastTrace?.message || 'The bounded workflow is starting. Results will update here.';
     $('trace').replaceChildren(); $('trace-focus').hidden = true; $('trace-focus').textContent = '';
     const trace = Array.isArray(job.trace) ? job.trace : [];
     for (const item of trace.slice(-40)) {
@@ -247,7 +257,8 @@
     }
     catch (error) { message('form-error', error.message); return; }
     $('start').disabled = true;
-    try { const job = await client.start(payload); storage(client.jobId); $('download').textContent = 'Download evidence ↓'; render(job); poll(); }
+    try { const job = await client.start(payload); storage(client.jobId); $('download').textContent = 'Download evidence ↓'; render(job);
+      $('results').scrollIntoView({block:'start', behavior:'auto'}); $('result-title').focus({preventScroll:true}); poll(); }
     catch (error) { message('form-error', error.message + (error.ambiguous ? ' Do not submit again: the server may already be working on it.' : '')); }
     finally { lock(); }
   });
@@ -256,12 +267,21 @@
     const url = URL.createObjectURL(new Blob([JSON.stringify({exported_at: new Date().toISOString(), ...latest}, null, 2)], {type: 'application/json'}));
     const link = el('a'); link.href = url; link.download = 'repair-evidence-' + latest.job_id + '.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
-  (async () => {
+  async function refreshAvailability() {
+    $('refresh-availability').disabled = true;
     try {
       const status = await client.status(); available = status.enabled === true && status.replay_only !== true;
-      $('availability').textContent = available ? 'Live runs available' : 'Saved replay only';
-      $('availability-detail').textContent = available ? 'Start one bounded workflow. You will see progress and recorded results here.' : availabilityMessage(status);
-    } catch (_) { $('availability').textContent = 'Live service unavailable'; $('availability-detail').textContent = 'The live service could not be reached. No model call has been made by this page.'; }
+      $('availability').textContent = available ? 'Live runs available' : status.reason === 'busy' ? 'Another repair is running' : status.reason === 'session_limit' ? 'Browser limit reached' : 'Saved replay available';
+      $('availability-detail').textContent = available ? 'The pagination case is ready. Run once, then follow the trace and named checks.' : availabilityMessage(status);
+      $('access-window').textContent = status.live_until_inclusive_date === '2027-01-01' ? 'Funded access window: through January 1, 2027 (Pacific). Two runs per browser in each rolling 24 hours; one repair runs at a time.' : '';
+      $('availability-links').hidden = available;
+      $('refresh-availability').hidden = available;
+    } catch (_) { available = false; $('availability').textContent = 'Live service unavailable'; $('availability-detail').textContent = 'The live service could not be reached. Check availability again or open the recorded evidence.'; $('availability-links').hidden = false; $('refresh-availability').hidden = false; }
+    finally { $('refresh-availability').disabled = false; lock(); }
+  }
+  $('refresh-availability').addEventListener('click', refreshAvailability);
+  (async () => {
+    await refreshAvailability();
     try { const saved = sessionStorage.getItem('repair-bench-live-job'); if (saved && /^[a-zA-Z0-9_-]{1,128}$/.test(saved)) { client.jobId = saved; poll(); } } catch (_) {}
     lock();
   })();

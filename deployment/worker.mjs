@@ -1,16 +1,14 @@
 import assets from './assets.mjs';
 import {buildChallenge,prepareRequest,parseProposalResponse,makeBundle,compareResult,parseStrictJSON} from './repair-core.mjs';
 import {startSandbox,pollSandbox} from './sandbox-rest.mjs';
+import {configurationReason,STATS_SQL,statsBindings,admissionState,ADMISSION_SQL,admissionBindings} from './live-policy.mjs';
 const ORIGINS=new Set(['https://repairbench.deltaxevaluate.com','https://api-repair-bench.deltax-evaluate.chatgpt.site','http://127.0.0.1:18770']);
 const TERMINAL=new Set(['completed','stopped','uncertain','failed']);
-const HISTORICAL_RESERVED=190000, JOB_RESERVATION=20000, TOTAL_LIMIT=2000000;
-const DEADLINE=Date.parse('2026-12-09T00:00:00Z');
 const now=()=>Date.now(), uuid=()=>crypto.randomUUID().replaceAll('-','');
-const visitorLimit=()=>2;
 const textBytes=s=>new TextEncoder().encode(s).length;
 async function sha(s){return [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))].map(x=>x.toString(16).padStart(2,'0')).join('');}
 function trace(data,stage,message){data.trace.push({stage,message,at:now()/1000});}
-function enabled(env){return env.LIVE_ENABLED==='true'&&!!env.NEBIUS_API_KEY&&/^aiproject-[A-Za-z0-9_-]+$/.test(env.NEBIUS_PROJECT_ID||'')&&now()<DEADLINE;}
+function enabled(env){return !configurationReason(env,now());}
 function response(data,status=200,cookie){return new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...(cookie?{'Set-Cookie':cookie}:{})}});}
 function publicJob(row){const d=JSON.parse(row.data);return {job_id:row.id,case:d.challenge.case,status:row.status,trace:d.trace,receipts:d.receipts,created_at:row.created/1000,needs_advance:!TERMINAL.has(row.status)&&!row.lease,phase_token:row.token};}
 async function save(db,row,d,phase,status='running'){
@@ -24,10 +22,9 @@ async function stopStale(db){
  for(const row of stale.results){const d=JSON.parse(row.data);trace(d,'uncertain','The session stopped before its outcome was confirmed. No request will be repeated.');await save(db,row,d,'done','uncertain');}
 }
 async function info(db,owner,env){
- const stats=await db.prepare('SELECT COALESCE(SUM(reserved),0) AS reserved,COUNT(*) AS jobs,COALESCE(SUM(CASE WHEN owner=? THEN 1 ELSE 0 END),0) AS visitor,COALESCE(MAX(active),0) AS active FROM repair_jobs').bind(owner).first();
- const limit=visitorLimit(env,owner);
- const reason=!enabled(env)?'operator_disabled':stats.active?'busy':stats.visitor>=limit?'session_limit':stats.reserved+HISTORICAL_RESERVED+JOB_RESERVATION>TOTAL_LIMIT?'allowance_exhausted':null;
- return {enabled:!reason,replay_only:!!reason,reason,jobs_per_visitor:limit,cases:['schema','pagination','custom'],execution_provider:'Nebius Sandbox',model_provider:'Nebius Token Factory',model:'NVIDIA Nemotron',credit_budget_usd:2};
+ const at=now();
+ const stats=await db.prepare(STATS_SQL).bind(...statsBindings(owner,at)).first();
+ return admissionState(stats,env,at);
 }
 async function readJson(request){
  if(!/^application\/json(?:;|$)/i.test(request.headers.get('content-type')||''))throw new Error('invalid_input');
@@ -114,12 +111,12 @@ export default {async fetch(request,env){
   await stopStale(db);
   if(request.method==='GET'&&url.pathname==='/api/live/status')return response(await info(db,owner,env),200,cookie);
   if(request.method==='POST'&&url.pathname==='/api/live/runs'){
-   if(!enabled(env))return response({error:'disabled'},403,cookie);
+   if(!enabled(env)){const status=await info(db,owner,env);return response({...status,error:status.reason||'disabled'},403,cookie);}
    await stopStale(db);
    let challenge;try{challenge=await buildChallenge(await readJson(request));}catch(_){return response({error:'invalid_input'},400,cookie);}
    const id=uuid(),token=uuid(),d={challenge,trace:[],receipts:[]};trace(d,'queued','Live repair accepted. At most two model proposals will be made.');
-   const inserted=await db.prepare('INSERT INTO repair_jobs (id,owner,status,phase,token,data,reserved,active,lease,created) SELECT ?,?,\'queued\',\'propose\',?,?,?,1,0,? WHERE (SELECT COALESCE(SUM(reserved),0) FROM repair_jobs)+?+?<=? AND (SELECT COUNT(*) FROM repair_jobs WHERE owner=?)<? AND NOT EXISTS(SELECT 1 FROM repair_jobs WHERE active=1)').bind(id,owner,token,JSON.stringify(d),JOB_RESERVATION,now(),HISTORICAL_RESERVED,JOB_RESERVATION,TOTAL_LIMIT,owner,visitorLimit(env,owner)).run();
-   if(!inserted.meta.changes)return response({error:'quota_exhausted'},429,cookie);
+   const inserted=await db.prepare(ADMISSION_SQL).bind(...admissionBindings({id,owner,token,data:d,at:now()})).run();
+   if(!inserted.meta.changes){const status=await info(db,owner,env);return response({...status,error:status.reason||'admission_rejected'},429,cookie);}
    return response(publicJob(await db.prepare('SELECT * FROM repair_jobs WHERE id=?').bind(id).first()),201,cookie);
   }
   const match=url.pathname.match(/^\/api\/live\/runs\/([a-f0-9]{32})(\/advance)?$/);

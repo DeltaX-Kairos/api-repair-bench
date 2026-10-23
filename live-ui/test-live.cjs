@@ -1,5 +1,8 @@
 const assert = require('node:assert/strict');
-const {LiveClient, customPayload, TERMINAL} = require('./app.js');
+const {LiveClient, customPayload, TERMINAL, availabilityMessage} = require('./app.js');
+assert.match(availabilityMessage({reason:'session_limit',jobs_per_visitor:2,visitor_reset_at:'2026-10-24T12:00:00Z'}), /rolling 24-hour.*available after/);
+assert.match(availabilityMessage({reason:'allowance_exhausted'}), /project run allowance/);
+assert.match(availabilityMessage({reason:'judging_window_ended'}), /judging window has ended/);
 const source = 'def normalize_id(value):\n    return int(value)\n';
 const contract = {description:'Preserve strings exactly.',checks:[{id:'zero',args:['001'],expected:'001'},{id:'number',args:[1],error:'ValueError'}]};
 const good = customPayload(source, JSON.stringify(contract));

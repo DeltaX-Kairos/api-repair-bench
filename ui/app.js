@@ -82,7 +82,7 @@
     const container = $('provider-runs'); container.replaceChildren();
     text('runs-status', 'Reading individual saved attempts…');
     try {
-      const response = await fetch('/api/runs', {cache:'no-store', credentials:'same-origin'});
+      const response = await fetch('runs.json', {cache:'no-store', credentials:'same-origin'});
       if (!response.ok) throw new Error('Run endpoint unavailable');
       const payload = await response.json();
       if (!Array.isArray(payload.runs)) throw new Error('Unsupported run format');
@@ -141,7 +141,7 @@
     const button = $('load-evidence'); button.disabled = true;
     text('provider-status', 'Reading saved receipts…');
     try {
-      const response = await fetch('/api/evidence', {cache:'no-store', credentials:'same-origin'});
+      const response = await fetch('evidence.json', {cache:'no-store', credentials:'same-origin'});
       if (!response.ok) throw new Error('Evidence endpoint unavailable');
       const evidence = await response.json();
       if (evidence.schema_version !== 1 || !evidence.stages) throw new Error('Unsupported evidence format');

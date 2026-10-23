@@ -1,24 +1,34 @@
 # API Repair Bench
 
-## Judges — start here
+## For integration engineers fixing silent API data loss
 
-- **Live:** [repairbench.deltaxevaluate.com/live](https://repairbench.deltaxevaluate.com/live/)
-- **Replay if live allowance is used:** [saved review](https://repairbench.deltaxevaluate.com/)
-- **Control boundary:** NVIDIA Nemotron proposes code; application logic binds the artifacts, runs remote validation and enforces at most one correction. The model has no deployment authority.
+An API can return HTTP 200 while its client silently drops page two or changes `"001"` to `1`. API Repair Bench lets an integration engineer submit that broken function to an enforced repair protocol, inspect the proposed replacement and check results, and export the evidence for review.
+
+**NVIDIA Nemotron proposes a patch. Nebius Sandbox runs the declared checks. Application code permits one correction at most, then stops. No code is deployed automatically.**
+
+## Judges — start with the missing page
+
+1. Open the [live workspace](https://repairbench.deltaxevaluate.com/live/) and choose **Pagination repair**.
+2. Click **Run live repair** once. Follow the proposal and Sandbox stages in the trace.
+3. Inspect the named checks, generated function and stopping reason, then choose **Download evidence**.
+
+The [fictional incident card](docs/incident.md) gives the concrete before/after contract. [JUDGES.md](JUDGES.md) explains the review path and current access status. Custom Python input remains an advanced option after the supplied case.
+
+**Judge access, verified October 23:** the revised admission policy covers **January 1, 2027, inclusive in America/Los_Angeles**. It permits two new jobs per browser in a rolling 24-hour window and one active job globally, within a $24.96 cumulative application reservation ceiling. Fresh public verification on October 23 completed the pagination repair with 4/4 checks passing on the first proposal; NVIDIA Nemotron and Nebius Sandbox both completed. [Judge-access operations](docs/judge-access.md) records the cutoff, budget and dependencies. If live admission is unavailable, use the [uninterrupted recorded demonstration](https://www.youtube.com/watch?v=4VUhHgnZwJE) or the [saved replay](https://repairbench.deltaxevaluate.com/); saved evidence is distinct from a fresh model call.
+
+**Product demo, polished October 23:** [watch two uninterrupted live browser runs](https://www.youtube.com/watch?v=4VUhHgnZwJE). The October 23 cut preserves both complete October 13 captures: identifier repair passed **3/3** checks and pagination repair passed **4/4**. Each run remains continuous from launch through its stopping result. Both passed on their first proposal; the video does not show a correction.
+
+The earlier **4/9 → 9/9** invoice correction is a separate September 11 archive in the saved replay and technical evidence:
 
 ![September 11 captured 4/9 to 9/9 invoice repair](docs/judges/invoice-repair-4-to-9.png)
 
-**Product demo (1:29):** [watch two fresh live browser runs](https://www.youtube.com/watch?v=eyNeHHAj5Mc). On October 13, the identifier repair passed **3/3** checks and the pagination repair passed **4/4**. Each is a separate, continuous recording from launch through its stopping result. Both passed on their first proposal; the video does not show a correction. The earlier **4/9 → 9/9** invoice correction remains in the saved replay and technical evidence.
+## Why enforce the repair protocol?
 
-Click **Run a repair → Your function → Run live repair** to try the prefilled identifier example when the public allowance remains. Watch the trace move through NVIDIA Nemotron, Nebius Token Factory and Nebius Sandbox; inspect the generated function, named checks, stopping reason and downloadable evidence. A fresh run may differ from the recording. The exact click path is also in [JUDGES.md](JUDGES.md).
+Generated code is untrusted input. The application, rather than the model, controls admission, artifact identity, remote execution, comparison, correction eligibility and termination. SHA-256 binding ties each proposal to its contract and evaluated bundle. Remote Sandbox execution separates generated code from the website control plane; final comparison stays outside the candidate runtime. A passing result authorizes review and export, not deployment.
 
-## What this is
+The candidate and observation runner currently share a Python process inside Sandbox. This is a documented observation boundary to strengthen; passing declared checks does not establish independently attested execution. The [architecture](#architecture-proposal-authority-without-deployment-authority) explains both the enforced controls and their limits.
 
-**Demonstration provenance:** the filmed October 13 updated-site identifier and pagination repairs passed **3/3** and **4/4** checks, respectively, on their first proposals using `nvidia/Nemotron-3_5-Lightning` and Nebius Sandbox. The **4/9 → 9/9** invoice correction is a separate September 11 archive, not part of this film. Other outcomes remain in the technical evidence. These small fictional cases are observed results, not a reliability estimate. The earlier Sandbox 403 was traced to a missing runtime project ID; configuration is corrected and admission now rejects placeholders.
-
-**Untrusted generation. Deterministic control.** API Repair Bench is a structural control framework for AI-generated API repairs. NVIDIA Nemotron proposes code; application logic enforces the evaluation contract, remote execution path and stopping conditions. The model has no authority to deploy a patch or extend its repair loop.
-
-Built for the Nebius × NVIDIA Global AI Hackathon, Coding and Agentic Engineering track. Original synthetic application and fixtures, developed with AI assistance under founder review. This repository does not include the private DeltaX engine.
+Built for the Nebius × NVIDIA Global AI Hackathon, Coding and Agentic Engineering track. Original application and fictional fixtures, developed with AI assistance under founder review. This repository does not include the private DeltaX engine. The cases are observed demonstrations, not a general repair-reliability estimate or evidence of customer outcomes. A [small usability-study protocol](docs/usability-study.md) is prepared; no participant results are claimed.
 
 ## Reproduce locally — no account or key required
 
@@ -32,13 +42,13 @@ Open http://127.0.0.1:18767. This is a **recorded evidence replay**, not a fresh
 
 Choose an integration, compare the source and reference repair, inspect the checks and recorded AI attempts, and export a reviewed reference example. Model proposals remain inert text in the browser. Keyboard controls and responsive layouts are included.
 
-## Live workspace — public verification complete
+## Live workspace — workflow and execution path
 
-The default public page remains the recorded review. The new `/live` workspace adds an explicit run button, progress trace, generated source, check outcomes and downloadable evidence. A visitor can select the fictional data-conversion example or supply one Python function with one to eight JSON checks. Jobs have a bounded proposal → Sandbox test → optional single correction → final result workflow. A missing or uncertain provider response is retained as unresolved, not automatically retried.
+The default public page remains the recorded review. The `/live` workspace provides an explicit run button, progress trace, generated source, check outcomes and downloadable evidence. A visitor can select the fictional data-conversion example or supply one Python function with one to eight JSON checks. Jobs have a bounded proposal → Sandbox test → optional single correction → final result workflow. A missing or uncertain provider response is retained as unresolved, not automatically retried.
 
 An earlier public browser-triggered Invoice run passed 4/9 checks on its initial proposal, then 9/9 after one bounded correction, and stopped without deployment. The October 13 identifier and pagination runs in the product demo each passed on the first proposal. These are distinct observed runs, not a reliability guarantee; historical recorded outcomes below remain separate.
 
-The live workspace also includes a pagination case built around a real incident pattern: an HTTP 200 response dropped page 2. It checks empty pages, duplicate occurrences, repeated cursors and the request budget. See the concrete [incident card](docs/incident.md).
+The supplied pagination case models a familiar integration failure: an HTTP 200 response dropped page 2. Its contract covers empty pages, duplicate occurrences, repeated cursors and a ten-request budget. See the explicitly fictional [incident card](docs/incident.md).
 
 There are two adapters for the same product workflow:
 

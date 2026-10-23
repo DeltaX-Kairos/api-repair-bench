@@ -42,7 +42,7 @@ assert.equal(get('provider-metrics').hidden,true);
 assert.match(get('provider-status').textContent,/missing evidence is not a failed test/);
 assert.equal(get('load-evidence').disabled,false);
 console.log('PASS: saved receipt read, unknown evidence, no-sandbox boundary and unavailable endpoint recovery.');
-context.fetch=async(url)=>({ok:true,json:async()=>url==='/api/runs'?{runs:[
+context.fetch=async(url)=>({ok:true,json:async()=>url==='runs.json'?{runs:[
 {run_id:'r1',case:'pagination',status:'uncertain',model_completed:false,source:null,remote_completed:false},
 {run_id:'r2',case:'schema',status:'proposal_rejected',model_completed:true,source:null,finish_reason:'length'},
 {run_id:'r3',case:'auth',status:'completed',model_completed:true,source:'<script>never execute</script>',explanation:'A synthetic candidate',remote_completed:false,review_findings:['Uses getattr on a dictionary','Discards replacement token']}
